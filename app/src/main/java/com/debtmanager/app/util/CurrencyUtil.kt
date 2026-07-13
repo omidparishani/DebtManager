@@ -17,4 +17,18 @@ object CurrencyUtil {
             .joinToString("")
         return digits.toLongOrNull()
     }
+
+    fun formatInput(input: String): String {
+        val amount = parse(input) ?: return ""
+        return formatWithoutUnit(amount)
+    }
+
+    fun formatInputOnChange(newValue: String): String {
+        val digits = newValue.filter { it.isDigit() || it in '۰'..'۹' }
+            .map { if (it in '۰'..'۹') '0' + (it - '۰') else it }
+            .joinToString("")
+        if (digits.isEmpty()) return ""
+        val amount = digits.toLongOrNull() ?: return ""
+        return formatWithoutUnit(amount)
+    }
 }

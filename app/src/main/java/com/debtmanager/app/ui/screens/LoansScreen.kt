@@ -31,7 +31,6 @@ fun LoansScreen(viewModel: MainViewModel, navController: NavController) {
     var deleteTarget by remember { mutableStateOf<Loan?>(null) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("وام‌ها") }) },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAdd = true },
@@ -180,11 +179,9 @@ fun LoanDetailScreen(viewModel: MainViewModel, loanId: Long, onBack: () -> Unit)
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(loan?.title ?: "جزئیات وام") },
-                navigationIcon = {
-                    TextButton(onClick = onBack) { Text("بازگشت") }
-                }
+            SecondaryTopBar(
+                title = loan?.title ?: "جزئیات وام",
+                onBack = onBack
             )
         }
     ) { padding ->
@@ -237,7 +234,7 @@ fun PayInstallmentDialog(
     onDismiss: () -> Unit,
     onPay: (Long, Long) -> Unit
 ) {
-    var amount by remember { mutableStateOf(installment.amount.toString()) }
+    var amount by remember { mutableStateOf(CurrencyUtil.formatWithoutUnit(installment.amount)) }
     var date by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
     AlertDialog(

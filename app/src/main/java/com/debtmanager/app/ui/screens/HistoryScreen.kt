@@ -14,6 +14,7 @@ import com.debtmanager.app.data.entity.PaymentType
 import com.debtmanager.app.ui.components.AmountText
 import com.debtmanager.app.ui.components.DateText
 import com.debtmanager.app.ui.components.EmptyState
+import com.debtmanager.app.ui.components.SecondaryTopBar
 import androidx.navigation.NavController
 import com.debtmanager.app.viewmodel.MainViewModel
 
@@ -38,11 +39,9 @@ fun HistoryScreen(viewModel: MainViewModel, navController: NavController) {
     }
 
     Column(Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text("تاریخچه پرداخت‌ها") },
-            navigationIcon = {
-                TextButton(onClick = { navController.popBackStack() }) { Text("بازگشت") }
-            }
+        SecondaryTopBar(
+            title = "تاریخچه پرداخت‌ها",
+            onBack = { navController.popBackStack() }
         )
         Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(

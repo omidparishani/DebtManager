@@ -88,6 +88,15 @@ object PersianDateUtil {
         return cal.timeInMillis
     }
 
+    fun setTimeOnDay(dayMillis: Long, hour: Int, minute: Int = 0): Long {
+        val cal = Calendar.getInstance().apply { timeInMillis = startOfDay(dayMillis) }
+        cal.set(Calendar.HOUR_OF_DAY, hour.coerceIn(0, 23))
+        cal.set(Calendar.MINUTE, minute.coerceIn(0, 59))
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        return cal.timeInMillis
+    }
+
     fun daysBetween(from: Long, to: Long): Int {
         val diff = startOfDay(to) - startOfDay(from)
         return (diff / 86_400_000L).toInt()

@@ -31,7 +31,6 @@ fun ChecksScreen(viewModel: MainViewModel) {
     var collectTarget by remember { mutableStateOf<CheckEntity?>(null) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("چک‌های صادرشده") }) },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAdd = true },
@@ -112,7 +111,9 @@ fun CheckCard(check: CheckEntity, onEdit: () -> Unit, onDelete: () -> Unit, onCo
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CheckFormDialog(existing: CheckEntity?, onDismiss: () -> Unit, onSave: (CheckEntity) -> Unit) {
-    var amount by remember { mutableStateOf(existing?.amount?.toString() ?: "") }
+    var amount by remember {
+        mutableStateOf(existing?.amount?.let { CurrencyUtil.formatWithoutUnit(it) } ?: "")
+    }
     var dueDate by remember { mutableLongStateOf(existing?.dueDate ?: System.currentTimeMillis()) }
     var bankName by remember { mutableStateOf(existing?.bankName ?: "") }
     var checkNumber by remember { mutableStateOf(existing?.checkNumber ?: "") }

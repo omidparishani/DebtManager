@@ -33,7 +33,6 @@ fun DebtsScreen(viewModel: MainViewModel) {
     var deleteTarget by remember { mutableStateOf<Debt?>(null) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("بدهکاری‌ها") }) },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAdd = true },
@@ -111,7 +110,9 @@ fun DebtCard(debt: Debt, onPay: () -> Unit, onEdit: () -> Unit, onDelete: () -> 
 @Composable
 fun DebtFormDialog(existing: Debt?, onDismiss: () -> Unit, onSave: (Debt) -> Unit) {
     var name by remember { mutableStateOf(existing?.creditorName ?: "") }
-    var amount by remember { mutableStateOf(existing?.totalAmount?.toString() ?: "") }
+    var amount by remember {
+        mutableStateOf(existing?.totalAmount?.let { CurrencyUtil.formatWithoutUnit(it) } ?: "")
+    }
     var date by remember { mutableLongStateOf(existing?.date ?: System.currentTimeMillis()) }
     var description by remember { mutableStateOf(existing?.description ?: "") }
     var category by remember { mutableStateOf(existing?.category ?: DebtCategory.PERSON.name) }
@@ -181,7 +182,7 @@ fun DebtFormDialog(existing: Debt?, onDismiss: () -> Unit, onSave: (Debt) -> Uni
 @Composable
 fun PayDebtDialog(debt: Debt, onDismiss: () -> Unit, onPay: (Long, Long) -> Unit) {
     val remaining = debt.totalAmount - debt.paidAmount
-    var amount by remember { mutableStateOf(remaining.toString()) }
+    var amount by remember { mutableStateOf(CurrencyUtil.formatWithoutUnit(remaining)) }
     var date by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
     AlertDialog(

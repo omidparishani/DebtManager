@@ -47,6 +47,10 @@ class DebtRepository(
     suspend fun updateLoan(loan: Loan) = loanDao.update(loan)
 
     suspend fun deleteLoan(loan: Loan) {
+        val installmentIds = loanDao.getInstallmentsList(loan.id).map { it.id }
+        if (installmentIds.isNotEmpty()) {
+            historyDao.deleteByReferences(PaymentType.LOAN.name, installmentIds)
+        }
         loanDao.deleteInstallmentsForLoan(loan.id)
         loanDao.delete(loan)
     }
@@ -101,7 +105,10 @@ class DebtRepository(
 
     suspend fun addCheck(check: CheckEntity): Long = checkDao.insert(check)
     suspend fun updateCheck(check: CheckEntity) = checkDao.update(check)
-    suspend fun deleteCheck(check: CheckEntity) = checkDao.delete(check)
+    suspend fun deleteCheck(check: CheckEntity) {
+        historyDao.deleteByReference(PaymentType.CHECK.name, check.id)
+        checkDao.delete(check)
+    }
 
     suspend fun collectCheck(check: CheckEntity, date: Long) {
         checkDao.update(check.copy(status = CheckStatus.COLLECTED.name))
@@ -126,7 +133,10 @@ class DebtRepository(
 
     suspend fun addDebt(debt: Debt): Long = debtDao.insert(debt)
     suspend fun updateDebt(debt: Debt) = debtDao.update(debt)
-    suspend fun deleteDebt(debt: Debt) = debtDao.delete(debt)
+    suspend fun deleteDebt(debt: Debt) {
+        historyDao.deleteByReference(PaymentType.DEBT.name, debt.id)
+        debtDao.delete(debt)
+    }
 
     suspend fun payDebt(debt: Debt, amount: Long, date: Long) {
         val newPaid = (debt.paidAmount + amount).coerceAtMost(debt.totalAmount)
@@ -150,7 +160,10 @@ class DebtRepository(
 
     suspend fun addRecurring(payment: RecurringPayment): Long = recurringDao.insert(payment)
     suspend fun updateRecurring(payment: RecurringPayment) = recurringDao.update(payment)
-    suspend fun deleteRecurring(payment: RecurringPayment) = recurringDao.delete(payment)
+    suspend fun deleteRecurring(payment: RecurringPayment) {
+        historyDao.deleteByReference(PaymentType.RECURRING.name, payment.id)
+        recurringDao.delete(payment)
+    }
 
     suspend fun markRecurringPaid(payment: RecurringPayment, paidDate: Long) {
         val freq = PaymentFrequency.entries.find { it.name == payment.frequency } ?: PaymentFrequency.MONTHLY

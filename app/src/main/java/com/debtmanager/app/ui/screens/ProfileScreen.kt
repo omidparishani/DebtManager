@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.debtmanager.app.R
 import com.debtmanager.app.ui.components.IconPicker
+import com.debtmanager.app.ui.components.SecondaryTopBar
 import com.debtmanager.app.util.ItemIcons
 import com.debtmanager.app.viewmodel.MainViewModel
 
@@ -42,11 +43,9 @@ fun ProfileScreen(viewModel: MainViewModel, navController: NavController) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("پروفایل") },
-                navigationIcon = {
-                    TextButton(onClick = { navController.popBackStack() }) { Text("بازگشت") }
-                }
+            SecondaryTopBar(
+                title = "پروفایل",
+                onBack = { navController.popBackStack() }
             )
         }
     ) { padding ->

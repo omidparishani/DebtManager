@@ -158,4 +158,10 @@ interface PaymentHistoryDao {
 
     @Query("DELETE FROM payment_history")
     suspend fun deleteAll()
+
+    @Query("DELETE FROM payment_history WHERE type = :type AND referenceId = :referenceId")
+    suspend fun deleteByReference(type: String, referenceId: Long)
+
+    @Query("DELETE FROM payment_history WHERE type = :type AND referenceId IN (:referenceIds)")
+    suspend fun deleteByReferences(type: String, referenceIds: List<Long>)
 }

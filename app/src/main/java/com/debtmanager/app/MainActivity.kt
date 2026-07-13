@@ -9,8 +9,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -24,8 +22,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.debtmanager.app.ui.components.EnhancedBottomNav
+import com.debtmanager.app.ui.components.MainTopBar
 import com.debtmanager.app.ui.navigation.Screen
-import com.debtmanager.app.ui.navigation.bottomNavItems
+import com.debtmanager.app.ui.navigation.bottomNavItemForRoute
+import com.debtmanager.app.ui.navigation.bottomNavRoutes
 import com.debtmanager.app.ui.screens.*
 import com.debtmanager.app.ui.theme.DebtManagerTheme
 import com.debtmanager.app.viewmodel.MainViewModel
@@ -72,34 +73,37 @@ class MainActivity : FragmentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DebtManagerNavHost(viewModel: MainViewModel) {
     val navController = rememberNavController()
     val navBackStack by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStack?.destination?.route
 
-    val showBottomBar = currentRoute in bottomNavItems.map { it.route }
+    val showBottomBar = currentRoute in bottomNavRoutes
+    val currentNavItem = bottomNavItemForRoute(currentRoute)
 
     Scaffold(
+        topBar = {
+            if (currentNavItem != null) {
+                MainTopBar(
+                    navItem = currentNavItem,
+                    viewModel = viewModel,
+                    navController = navController
+                )
+            }
+        },
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar {
-                    bottomNavItems.forEach { screen ->
-                        NavigationBarItem(
-                            selected = currentRoute == screen.route,
-                            onClick = {
-                                navController.navigate(screen.route) {
-                                    popUpTo(Screen.Dashboard.route) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            icon = { Icon(screen.icon, screen.title) },
-                            label = { Text(screen.title) }
-                        )
+                EnhancedBottomNav(
+                    currentRoute = currentRoute,
+                    onNavigate = { route ->
+                        navController.navigate(route) {
+                            popUpTo(Screen.Dashboard.route) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
-                }
+                )
             }
         }
     ) { padding ->

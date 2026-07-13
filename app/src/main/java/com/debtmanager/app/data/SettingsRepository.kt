@@ -13,6 +13,10 @@ class SettingsRepository(private val context: Context) {
 
     companion object {
         val REMINDER_DAYS = intPreferencesKey("reminder_days")
+        val REMINDER_HOUR = intPreferencesKey("reminder_hour")
+        val NOTIFICATION_SOUND = stringPreferencesKey("notification_sound")
+        val VIBRATION_ENABLED = booleanPreferencesKey("vibration_enabled")
+        val REMIND_ON_DUE_DAY = booleanPreferencesKey("remind_on_due_day")
         val DARK_MODE = booleanPreferencesKey("dark_mode")
         val PIN_ENABLED = booleanPreferencesKey("pin_enabled")
         val PIN_HASH = stringPreferencesKey("pin_hash")
@@ -24,6 +28,10 @@ class SettingsRepository(private val context: Context) {
     }
 
     val reminderDays: Flow<Int> = context.dataStore.data.map { it[REMINDER_DAYS] ?: 3 }
+    val reminderHour: Flow<Int> = context.dataStore.data.map { it[REMINDER_HOUR] ?: 9 }
+    val notificationSound: Flow<String> = context.dataStore.data.map { it[NOTIFICATION_SOUND] ?: "default" }
+    val vibrationEnabled: Flow<Boolean> = context.dataStore.data.map { it[VIBRATION_ENABLED] ?: true }
+    val remindOnDueDay: Flow<Boolean> = context.dataStore.data.map { it[REMIND_ON_DUE_DAY] ?: true }
     val darkMode: Flow<Boolean> = context.dataStore.data.map { it[DARK_MODE] ?: false }
     val pinEnabled: Flow<Boolean> = context.dataStore.data.map { it[PIN_ENABLED] ?: false }
     val pinHash: Flow<String?> = context.dataStore.data.map { it[PIN_HASH] }
@@ -33,6 +41,10 @@ class SettingsRepository(private val context: Context) {
     val notificationsEnabled: Flow<Boolean> = context.dataStore.data.map { it[NOTIFICATIONS_ENABLED] ?: true }
 
     suspend fun setReminderDays(days: Int) = edit { it[REMINDER_DAYS] = days }
+    suspend fun setReminderHour(hour: Int) = edit { it[REMINDER_HOUR] = hour.coerceIn(0, 23) }
+    suspend fun setNotificationSound(soundId: String) = edit { it[NOTIFICATION_SOUND] = soundId }
+    suspend fun setVibrationEnabled(enabled: Boolean) = edit { it[VIBRATION_ENABLED] = enabled }
+    suspend fun setRemindOnDueDay(enabled: Boolean) = edit { it[REMIND_ON_DUE_DAY] = enabled }
     suspend fun setDarkMode(enabled: Boolean) = edit { it[DARK_MODE] = enabled }
     suspend fun setPinEnabled(enabled: Boolean) = edit { it[PIN_ENABLED] = enabled }
     suspend fun setPinHash(hash: String) = edit { it[PIN_HASH] = hash }

@@ -35,35 +35,11 @@ fun DashboardScreen(viewModel: MainViewModel, navController: NavController) {
     val userName by viewModel.userName.collectAsState()
     val userIcon by viewModel.userIcon.collectAsState()
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text("داشبورد مالی") },
-            actions = {
-                IconButton(onClick = { navController.navigate(Screen.Profile.route) }) {
-                    if (userIcon == "avatar_brand") {
-                        Image(
-                            painter = painterResource(R.drawable.brand_logo),
-                            contentDescription = "پروفایل",
-                            modifier = Modifier.size(32.dp).clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Icon(ItemIcons.resolve(userIcon), "پروفایل")
-                    }
-                }
-                IconButton(onClick = { navController.navigate(Screen.History.route) }) {
-                    Icon(Icons.Default.History, "تاریخچه")
-                }
-                IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
-                    Icon(Icons.Default.Settings, "تنظیمات")
-                }
-            }
-        )
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
             item {
                 ElevatedCard {
                     Row(
@@ -185,7 +161,6 @@ fun DashboardScreen(viewModel: MainViewModel, navController: NavController) {
                 }
             }
         }
-    }
 }
 
 @Composable

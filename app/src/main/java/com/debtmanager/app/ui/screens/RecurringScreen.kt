@@ -30,7 +30,6 @@ fun RecurringScreen(viewModel: MainViewModel) {
     var deleteTarget by remember { mutableStateOf<RecurringPayment?>(null) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("اقساط دوره‌ای") }) },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAdd = true },
@@ -104,7 +103,9 @@ fun RecurringCard(payment: RecurringPayment, onMarkPaid: () -> Unit, onEdit: () 
 @Composable
 fun RecurringFormDialog(existing: RecurringPayment?, onDismiss: () -> Unit, onSave: (RecurringPayment) -> Unit) {
     var title by remember { mutableStateOf(existing?.title ?: "") }
-    var amount by remember { mutableStateOf(existing?.amount?.toString() ?: "") }
+    var amount by remember {
+        mutableStateOf(existing?.amount?.let { CurrencyUtil.formatWithoutUnit(it) } ?: "")
+    }
     var frequency by remember { mutableStateOf(existing?.frequency ?: PaymentFrequency.MONTHLY.name) }
     var nextDueDate by remember { mutableLongStateOf(existing?.nextDueDate ?: System.currentTimeMillis()) }
     var category by remember { mutableStateOf(existing?.category ?: "") }

@@ -97,11 +97,12 @@ fun AmountTextField(
 ) {
     OutlinedTextField(
         value = value,
-        onValueChange = onValueChange,
+        onValueChange = { onValueChange(CurrencyUtil.formatInputOnChange(it)) },
         label = { Text(label) },
         modifier = modifier.fillMaxWidth(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        singleLine = true
+        singleLine = true,
+        placeholder = { Text("۰") }
     )
 }
 

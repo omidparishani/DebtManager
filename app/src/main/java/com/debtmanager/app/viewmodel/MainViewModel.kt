@@ -12,6 +12,7 @@ import com.debtmanager.app.data.repository.UpcomingItem
 import com.debtmanager.app.data.repository.getInstallmentStatus
 import com.debtmanager.app.util.PersianDateUtil
 import com.debtmanager.app.worker.ReminderScheduler
+import com.debtmanager.app.worker.ReminderWorker
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.io.File
@@ -27,6 +28,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val darkMode = settings.darkMode.stateIn(viewModelScope, SharingStarted.Eagerly, false)
     val reminderDays = settings.reminderDays.stateIn(viewModelScope, SharingStarted.Eagerly, 3)
+    val reminderHour = settings.reminderHour.stateIn(viewModelScope, SharingStarted.Eagerly, 9)
+    val notificationSound = settings.notificationSound.stateIn(viewModelScope, SharingStarted.Eagerly, "default")
+    val vibrationEnabled = settings.vibrationEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+    val remindOnDueDay = settings.remindOnDueDay.stateIn(viewModelScope, SharingStarted.Eagerly, true)
     val pinEnabled = settings.pinEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, false)
     val pinHash = settings.pinHash.stateIn(viewModelScope, SharingStarted.Eagerly, null)
     val biometricEnabled = settings.biometricEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, false)
@@ -247,7 +252,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteLoan(loan: Loan, onDone: () -> Unit) = viewModelScope.launch {
+        val installments = db.loanDao().getInstallmentsList(loan.id)
         repository.deleteLoan(loan)
+        installments.forEach { ReminderWorker.cancel(getApplication(), it.id.toInt()) }
         onDone()
     }
 
@@ -277,6 +284,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun deleteCheck(check: CheckEntity, onDone: () -> Unit) = viewModelScope.launch {
         repository.deleteCheck(check)
+        ReminderWorker.cancel(getApplication(), (check.id + 10000).toInt())
         onDone()
     }
 
@@ -328,15 +336,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun deleteRecurring(payment: RecurringPayment, onDone: () -> Unit) = viewModelScope.launch {
         repository.deleteRecurring(payment)
+        ReminderWorker.cancel(getApplication(), (payment.id + 20000).toInt())
         onDone()
     }
 
     // Settings
     fun setDarkMode(enabled: Boolean) = viewModelScope.launch { settings.setDarkMode(enabled) }
-    fun setReminderDays(days: Int) = viewModelScope.launch { settings.setReminderDays(days) }
+    fun setReminderDays(days: Int) = viewModelScope.launch {
+        settings.setReminderDays(days)
+        ReminderScheduler.rescheduleAll(getApplication())
+    }
+    fun setReminderHour(hour: Int) = viewModelScope.launch {
+        settings.setReminderHour(hour)
+        ReminderScheduler.rescheduleAll(getApplication())
+    }
+    fun setNotificationSound(soundId: String) = viewModelScope.launch { settings.setNotificationSound(soundId) }
+    fun setVibrationEnabled(enabled: Boolean) = viewModelScope.launch { settings.setVibrationEnabled(enabled) }
+    fun setRemindOnDueDay(enabled: Boolean) = viewModelScope.launch {
+        settings.setRemindOnDueDay(enabled)
+        ReminderScheduler.rescheduleAll(getApplication())
+    }
     fun setUserName(name: String) = viewModelScope.launch { settings.setUserName(name) }
     fun setUserIcon(icon: String) = viewModelScope.launch { settings.setUserIcon(icon) }
-    fun setNotificationsEnabled(enabled: Boolean) = viewModelScope.launch { settings.setNotificationsEnabled(enabled) }
+    fun setNotificationsEnabled(enabled: Boolean) = viewModelScope.launch {
+        settings.setNotificationsEnabled(enabled)
+        if (enabled) ReminderScheduler.rescheduleAll(getApplication())
+    }
     fun setPin(pin: String) = viewModelScope.launch {
         settings.setPinHash(com.debtmanager.app.security.PinManager.hashPin(pin))
         settings.setPinEnabled(true)
