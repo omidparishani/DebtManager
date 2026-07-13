@@ -1,6 +1,6 @@
-package com.debtmanager.app.ui.components
-
 @file:OptIn(ExperimentalMaterial3Api::class)
+
+package com.debtmanager.app.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
