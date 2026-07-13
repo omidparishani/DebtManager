@@ -6,9 +6,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -18,6 +20,7 @@ import com.debtmanager.app.ui.components.*
 import com.debtmanager.app.ui.theme.StatusOverdue
 import com.debtmanager.app.ui.theme.StatusPaid
 import com.debtmanager.app.util.CurrencyUtil
+import com.debtmanager.app.util.ItemIcons
 import com.debtmanager.app.viewmodel.MainViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -25,13 +28,17 @@ import com.debtmanager.app.viewmodel.MainViewModel
 fun DebtsScreen(viewModel: MainViewModel) {
     val debts by viewModel.debts.collectAsState()
     var showAdd by remember { mutableStateOf(false) }
+    var editTarget by remember { mutableStateOf<Debt?>(null) }
     var payTarget by remember { mutableStateOf<Debt?>(null) }
     var deleteTarget by remember { mutableStateOf<Debt?>(null) }
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("بدهکاری‌ها") }) },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAdd = true }) { Icon(Icons.Default.Add, "افزودن") }
+            FloatingActionButton(
+                onClick = { showAdd = true },
+                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
+            ) { Icon(Icons.Default.Add, "افزودن") }
         }
     ) { padding ->
         if (debts.isEmpty()) {
@@ -39,14 +46,24 @@ fun DebtsScreen(viewModel: MainViewModel) {
         } else {
             LazyColumn(Modifier.padding(padding).fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(debts, key = { it.id }) { debt ->
-                    DebtCard(debt, onPay = { payTarget = debt }, onDelete = { deleteTarget = debt })
+                    DebtCard(
+                        debt,
+                        onPay = { payTarget = debt },
+                        onEdit = { editTarget = debt },
+                        onDelete = { deleteTarget = debt }
+                    )
                 }
             }
         }
     }
 
-    if (showAdd) DebtFormDialog(onDismiss = { showAdd = false }) { debt ->
+    if (showAdd) DebtFormDialog(null, onDismiss = { showAdd = false }) { debt ->
         viewModel.addDebt(debt) { showAdd = false }
+    }
+    editTarget?.let { debt ->
+        DebtFormDialog(debt, onDismiss = { editTarget = null }) { updated ->
+            viewModel.updateDebt(updated) { editTarget = null }
+        }
     }
     payTarget?.let { debt -> PayDebtDialog(debt, onDismiss = { payTarget = null }) { amount, date ->
         viewModel.payDebt(debt, amount, date) { payTarget = null }
@@ -59,27 +76,32 @@ fun DebtsScreen(viewModel: MainViewModel) {
 }
 
 @Composable
-fun DebtCard(debt: Debt, onPay: () -> Unit, onDelete: () -> Unit) {
+fun DebtCard(debt: Debt, onPay: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
     val remaining = debt.totalAmount - debt.paidAmount
     val isPaid = remaining <= 0
     val categoryLabel = DebtCategory.entries.find { it.name == debt.category }?.label ?: debt.category
+    val iconKey = debt.icon.ifBlank { ItemIcons.defaultForDebtCategory(debt.category) }
 
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(debt.creditorName, fontWeight = FontWeight.Bold)
-                Text(categoryLabel, style = MaterialTheme.typography.labelSmall)
-            }
-            Text("کل: ${CurrencyUtil.format(debt.totalAmount)}")
-            Text("پرداخت‌شده: ${CurrencyUtil.format(debt.paidAmount)}", color = StatusPaid)
-            Text("مانده: ${CurrencyUtil.format(remaining)}", color = if (isPaid) StatusPaid else StatusOverdue, fontWeight = FontWeight.Bold)
-            DateText(debt.date, short = true)
-            if (debt.description.isNotBlank()) Text(debt.description, style = MaterialTheme.typography.bodySmall)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                if (!isPaid) {
-                    TextButton(onClick = onPay) { Icon(Icons.Default.Payment, null); Text("پرداخت") }
+    ElevatedCard {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
+            ItemIconBadge(iconKey, tint = if (isPaid) StatusPaid else StatusOverdue)
+            Column(Modifier.weight(1f)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(debt.creditorName, fontWeight = FontWeight.Bold)
+                    Text(categoryLabel, style = MaterialTheme.typography.labelSmall)
                 }
-                IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, "حذف") }
+                Text("کل: ${CurrencyUtil.format(debt.totalAmount)}")
+                Text("پرداخت‌شده: ${CurrencyUtil.format(debt.paidAmount)}", color = StatusPaid)
+                Text("مانده: ${CurrencyUtil.format(remaining)}", color = if (isPaid) StatusPaid else StatusOverdue, fontWeight = FontWeight.Bold)
+                DateText(debt.date, short = true)
+                if (debt.description.isNotBlank()) Text(debt.description, style = MaterialTheme.typography.bodySmall)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    if (!isPaid) {
+                        TextButton(onClick = onPay) { Icon(Icons.Default.Payment, null); Text("پرداخت") }
+                    }
+                    IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, "ویرایش") }
+                    IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, "حذف") }
+                }
             }
         }
     }
@@ -87,31 +109,52 @@ fun DebtCard(debt: Debt, onPay: () -> Unit, onDelete: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DebtFormDialog(onDismiss: () -> Unit, onSave: (Debt) -> Unit) {
-    var name by remember { mutableStateOf("") }
-    var amount by remember { mutableStateOf("") }
-    var date by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    var description by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf(DebtCategory.PERSON.name) }
+fun DebtFormDialog(existing: Debt?, onDismiss: () -> Unit, onSave: (Debt) -> Unit) {
+    var name by remember { mutableStateOf(existing?.creditorName ?: "") }
+    var amount by remember { mutableStateOf(existing?.totalAmount?.toString() ?: "") }
+    var date by remember { mutableLongStateOf(existing?.date ?: System.currentTimeMillis()) }
+    var description by remember { mutableStateOf(existing?.description ?: "") }
+    var category by remember { mutableStateOf(existing?.category ?: DebtCategory.PERSON.name) }
+    var icon by remember {
+        mutableStateOf(
+            existing?.let { it.icon.ifBlank { ItemIcons.defaultForDebtCategory(it.category) } }
+                ?: ItemIcons.defaultForDebtCategory(DebtCategory.PERSON.name)
+        )
+    }
     var expanded by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("افزودن بدهی") },
+        title = { Text(if (existing == null) "افزودن بدهی" else "ویرایش بدهی") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(name, { name = it }, label = { Text("نام فرد/فروشگاه *") }, modifier = Modifier.fillMaxWidth())
-                AmountTextField(amount, { amount = it }, "مبلغ (ریال) *")
-                JalaliDatePickerField(date, { date = it }, "تاریخ")
-                OutlinedTextField(description, { description = it }, label = { Text("توضیحات") }, modifier = Modifier.fillMaxWidth())
-                ExposedDropdownMenuBox(expanded, { expanded = it }) {
-                    val label = DebtCategory.entries.find { it.name == category }?.label ?: ""
-                    OutlinedTextField(label, {}, readOnly = true, label = { Text("دسته‌بندی") }, modifier = Modifier.menuAnchor().fillMaxWidth())
-                    ExposedDropdownMenu(expanded, { expanded = false }) {
-                        DebtCategory.entries.forEach { cat ->
-                            DropdownMenuItem(text = { Text(cat.label) }, onClick = { category = cat.name; expanded = false })
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                item { OutlinedTextField(name, { name = it }, label = { Text("نام فرد/فروشگاه *") }, modifier = Modifier.fillMaxWidth()) }
+                item { AmountTextField(amount, { amount = it }, "مبلغ (ریال) *") }
+                item { JalaliDatePickerField(date, { date = it }, "تاریخ") }
+                item { OutlinedTextField(description, { description = it }, label = { Text("توضیحات") }, modifier = Modifier.fillMaxWidth()) }
+                item {
+                    ExposedDropdownMenuBox(expanded, { expanded = it }) {
+                        val label = DebtCategory.entries.find { it.name == category }?.label ?: ""
+                        OutlinedTextField(label, {}, readOnly = true, label = { Text("دسته‌بندی") }, modifier = Modifier.menuAnchor().fillMaxWidth())
+                        ExposedDropdownMenu(expanded, { expanded = false }) {
+                            DebtCategory.entries.forEach { cat ->
+                                DropdownMenuItem(text = { Text(cat.label) }, onClick = {
+                                    category = cat.name
+                                    if (icon.isBlank() || icon == ItemIcons.defaultForDebtCategory(category)) {
+                                        icon = ItemIcons.defaultForDebtCategory(cat.name)
+                                    }
+                                    expanded = false
+                                })
+                            }
                         }
                     }
+                }
+                item {
+                    IconPicker(
+                        selectedIcon = icon,
+                        onIconSelected = { icon = it },
+                        label = "آیکون"
+                    )
                 }
             }
         },
@@ -119,7 +162,16 @@ fun DebtFormDialog(onDismiss: () -> Unit, onSave: (Debt) -> Unit) {
             TextButton(onClick = {
                 val a = CurrencyUtil.parse(amount) ?: return@TextButton
                 if (name.isBlank()) return@TextButton
-                onSave(Debt(creditorName = name, category = category, totalAmount = a, date = date, description = description))
+                onSave(Debt(
+                    id = existing?.id ?: 0,
+                    creditorName = name,
+                    category = category,
+                    totalAmount = a,
+                    paidAmount = existing?.paidAmount ?: 0,
+                    date = date,
+                    description = description,
+                    icon = icon
+                ))
             }) { Text("ذخیره") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }

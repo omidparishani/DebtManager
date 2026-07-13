@@ -30,6 +30,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val pinEnabled = settings.pinEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, false)
     val pinHash = settings.pinHash.stateIn(viewModelScope, SharingStarted.Eagerly, null)
     val biometricEnabled = settings.biometricEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val userName = settings.userName.stateIn(viewModelScope, SharingStarted.Eagerly, "امید")
+    val userIcon = settings.userIcon.stateIn(viewModelScope, SharingStarted.Eagerly, "avatar_person")
+    val notificationsEnabled = settings.notificationsEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
     private val now = MutableStateFlow(System.currentTimeMillis())
 
@@ -124,7 +127,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     dueDate = inst.dueDate,
                     type = PaymentType.LOAN,
                     referenceId = inst.id,
-                    status = getInstallmentStatus(inst.dueDate, inst.isPaid, currentTime)
+                    status = getInstallmentStatus(inst.dueDate, inst.isPaid, currentTime),
+                    icon = loan?.icon ?: "account_balance"
                 ))
             }
             checkList.filter {
@@ -136,7 +140,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     dueDate = check.dueDate,
                     type = PaymentType.CHECK,
                     referenceId = check.id,
-                    status = getInstallmentStatus(check.dueDate, false, currentTime)
+                    status = getInstallmentStatus(check.dueDate, false, currentTime),
+                    icon = check.icon.ifBlank { "receipt" }
                 ))
             }
             recurringList.filter { it.nextDueDate in currentTime..upcomingEnd }.forEach { r ->
@@ -146,7 +151,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     dueDate = r.nextDueDate,
                     type = PaymentType.RECURRING,
                     referenceId = r.id,
-                    status = getInstallmentStatus(r.nextDueDate, false, currentTime)
+                    status = getInstallmentStatus(r.nextDueDate, false, currentTime),
+                    icon = r.icon.ifBlank { "money" }
                 ))
             }
         }.sortedBy { it.dueDate }
@@ -160,7 +166,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     dueDate = inst.dueDate,
                     type = PaymentType.LOAN,
                     referenceId = inst.id,
-                    status = InstallmentStatus.OVERDUE
+                    status = InstallmentStatus.OVERDUE,
+                    icon = loan?.icon ?: "account_balance"
                 ))
             }
             overdueChecks.forEach { check ->
@@ -170,7 +177,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     dueDate = check.dueDate,
                     type = PaymentType.CHECK,
                     referenceId = check.id,
-                    status = InstallmentStatus.OVERDUE
+                    status = InstallmentStatus.OVERDUE,
+                    icon = check.icon.ifBlank { "receipt" }
                 ))
             }
             overdueRecurring.forEach { r ->
@@ -180,17 +188,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     dueDate = r.nextDueDate,
                     type = PaymentType.RECURRING,
                     referenceId = r.id,
-                    status = InstallmentStatus.OVERDUE
+                    status = InstallmentStatus.OVERDUE,
+                    icon = r.icon.ifBlank { "money" }
                 ))
             }
             activeDebts.filter { it.paidAmount < it.totalAmount }.forEach { debt ->
+                val icon = debt.icon.ifBlank { com.debtmanager.app.util.ItemIcons.defaultForDebtCategory(debt.category) }
                 add(UpcomingItem(
                     title = "بدهی: ${debt.creditorName}",
                     amount = debt.totalAmount - debt.paidAmount,
                     dueDate = debt.date,
                     type = PaymentType.DEBT,
                     referenceId = debt.id,
-                    status = InstallmentStatus.OVERDUE
+                    status = InstallmentStatus.OVERDUE,
+                    icon = icon
                 ))
             }
         }.sortedBy { it.dueDate }
@@ -213,9 +224,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun addLoan(
         title: String, totalAmount: Long, installmentCount: Int,
         installmentAmount: Long, startDate: Long, paymentDay: Int, notes: String,
+        icon: String = "account_balance",
         onDone: () -> Unit
     ) = viewModelScope.launch {
-        val id = repository.addLoan(title, totalAmount, installmentCount, installmentAmount, startDate, paymentDay, notes)
+        val id = repository.addLoan(title, totalAmount, installmentCount, installmentAmount, startDate, paymentDay, notes, icon)
         val installments = db.loanDao().getInstallmentsList(id)
         val days = reminderDays.value
         installments.forEach { inst ->
@@ -229,6 +241,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         onDone()
     }
 
+    fun updateLoan(loan: Loan, onDone: () -> Unit) = viewModelScope.launch {
+        repository.updateLoan(loan)
+        onDone()
+    }
+
     fun deleteLoan(loan: Loan, onDone: () -> Unit) = viewModelScope.launch {
         repository.deleteLoan(loan)
         onDone()
@@ -237,12 +254,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Check operations
     fun addCheck(check: CheckEntity, onDone: () -> Unit) = viewModelScope.launch {
         val id = repository.addCheck(check)
-        ReminderScheduler.scheduleForCheck(getApplication(), id, check.payee, check.amount, check.dueDate, reminderDays.value)
+        ReminderScheduler.scheduleForCheck(
+            getApplication(), id, check.payee, check.amount, check.dueDate,
+            reminderDays.value, check.description
+        )
         onDone()
     }
 
     fun updateCheck(check: CheckEntity, onDone: () -> Unit) = viewModelScope.launch {
         repository.updateCheck(check)
+        ReminderScheduler.scheduleForCheck(
+            getApplication(), check.id, check.payee, check.amount, check.dueDate,
+            reminderDays.value, check.description
+        )
         onDone()
     }
 
@@ -267,6 +291,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         onDone()
     }
 
+    fun updateDebt(debt: Debt, onDone: () -> Unit) = viewModelScope.launch {
+        repository.updateDebt(debt)
+        onDone()
+    }
+
     fun deleteDebt(debt: Debt, onDone: () -> Unit) = viewModelScope.launch {
         repository.deleteDebt(debt)
         onDone()
@@ -276,6 +305,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun addRecurring(payment: RecurringPayment, onDone: () -> Unit) = viewModelScope.launch {
         val id = repository.addRecurring(payment)
         ReminderScheduler.scheduleForRecurring(getApplication(), id, payment.title, payment.amount, payment.nextDueDate, reminderDays.value)
+        onDone()
+    }
+
+    fun updateRecurring(payment: RecurringPayment, onDone: () -> Unit) = viewModelScope.launch {
+        repository.updateRecurring(payment)
+        ReminderScheduler.scheduleForRecurring(
+            getApplication(), payment.id, payment.title, payment.amount,
+            payment.nextDueDate, reminderDays.value, payment.category
+        )
         onDone()
     }
 
@@ -296,6 +334,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Settings
     fun setDarkMode(enabled: Boolean) = viewModelScope.launch { settings.setDarkMode(enabled) }
     fun setReminderDays(days: Int) = viewModelScope.launch { settings.setReminderDays(days) }
+    fun setUserName(name: String) = viewModelScope.launch { settings.setUserName(name) }
+    fun setUserIcon(icon: String) = viewModelScope.launch { settings.setUserIcon(icon) }
+    fun setNotificationsEnabled(enabled: Boolean) = viewModelScope.launch { settings.setNotificationsEnabled(enabled) }
     fun setPin(pin: String) = viewModelScope.launch {
         settings.setPinHash(com.debtmanager.app.security.PinManager.hashPin(pin))
         settings.setPinEnabled(true)
@@ -309,6 +350,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun importBackup(file: File, onResult: (Boolean) -> Unit) = viewModelScope.launch {
         onResult(backupManager.importFromJson(file).isSuccess)
+    }
+
+    fun clearAllData(onDone: () -> Unit) = viewModelScope.launch {
+        repository.clearAllData()
+        onDone()
     }
 
     fun getInstallments(loanId: Long) = repository.getInstallments(loanId)

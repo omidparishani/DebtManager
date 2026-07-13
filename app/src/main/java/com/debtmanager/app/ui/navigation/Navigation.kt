@@ -13,6 +13,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     data object Recurring : Screen("recurring", "اقساط دوره‌ای", Icons.Filled.Autorenew)
     data object History : Screen("history", "تاریخچه", Icons.Filled.History)
     data object Settings : Screen("settings", "تنظیمات", Icons.Filled.Settings)
+    data object Profile : Screen("profile", "پروفایل", Icons.Filled.AccountCircle)
 
     data object LoanDetail : Screen("loan/{loanId}", "جزئیات وام", Icons.Filled.AccountBalance) {
         fun createRoute(loanId: Long) = "loan/$loanId"

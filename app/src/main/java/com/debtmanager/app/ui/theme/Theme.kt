@@ -10,22 +10,31 @@ val StatusUpcoming = Color(0xFFF57C00)
 val StatusOverdue = Color(0xFFC62828)
 val PrimaryBlue = Color(0xFF1565C0)
 val PrimaryBlueDark = Color(0xFF90CAF9)
+val AccentTeal = Color(0xFF00838F)
+val SurfaceGradientStart = Color(0xFFF0F4FF)
+val SurfaceGradientEnd = Color(0xFFF5F7FA)
 
 private val LightColors = lightColorScheme(
     primary = PrimaryBlue,
     onPrimary = Color.White,
-    secondary = Color(0xFF00838F),
+    primaryContainer = Color(0xFFD1E4FF),
+    secondary = AccentTeal,
+    secondaryContainer = Color(0xFFB2EBF2),
     background = Color(0xFFF5F7FA),
     surface = Color.White,
+    surfaceVariant = Color(0xFFE8EDF5),
     error = StatusOverdue
 )
 
 private val DarkColors = darkColorScheme(
     primary = PrimaryBlueDark,
     onPrimary = Color(0xFF0D47A1),
+    primaryContainer = Color(0xFF1A3A5C),
     secondary = Color(0xFF4DD0E1),
+    secondaryContainer = Color(0xFF004D56),
     background = Color(0xFF121212),
     surface = Color(0xFF1E1E1E),
+    surfaceVariant = Color(0xFF2A2A2A),
     error = Color(0xFFEF5350)
 )
 

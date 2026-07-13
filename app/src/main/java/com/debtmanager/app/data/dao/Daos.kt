@@ -47,6 +47,12 @@ interface LoanDao {
 
     @Query("DELETE FROM loan_installments WHERE loanId = :loanId")
     suspend fun deleteInstallmentsForLoan(loanId: Long)
+
+    @Query("DELETE FROM loan_installments")
+    suspend fun deleteAllInstallments()
+
+    @Query("DELETE FROM loans")
+    suspend fun deleteAllLoans()
 }
 
 @Dao
@@ -74,6 +80,9 @@ interface CheckDao {
 
     @Delete
     suspend fun delete(check: CheckEntity)
+
+    @Query("DELETE FROM checks")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -95,6 +104,9 @@ interface DebtDao {
 
     @Delete
     suspend fun delete(debt: Debt)
+
+    @Query("DELETE FROM debts")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -119,6 +131,9 @@ interface RecurringPaymentDao {
 
     @Delete
     suspend fun delete(payment: RecurringPayment)
+
+    @Query("DELETE FROM recurring_payments")
+    suspend fun deleteAll()
 }
 
 @Dao

@@ -1,19 +1,35 @@
 package com.debtmanager.app.ui.components
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.debtmanager.app.data.entity.InstallmentStatus
 import com.debtmanager.app.ui.theme.statusColor
 import com.debtmanager.app.util.CurrencyUtil
+import com.debtmanager.app.util.ItemIconOption
+import com.debtmanager.app.util.ItemIcons
 import com.debtmanager.app.util.PersianDateUtil
 
 @Composable
@@ -99,14 +115,34 @@ fun JalaliDatePickerField(
 ) {
     var showDialog by remember { mutableStateOf(false) }
     val j = PersianDateUtil.fromTimestamp(selectedDate)
+    val interactionSource = remember { MutableInteractionSource() }
 
-    OutlinedTextField(
-        value = PersianDateUtil.formatShort(selectedDate),
-        onValueChange = {},
-        readOnly = true,
-        label = { Text(label) },
-        modifier = modifier.fillMaxWidth().clickable { showDialog = true }
-    )
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null
+            ) { showDialog = true }
+    ) {
+        OutlinedTextField(
+            value = PersianDateUtil.formatShort(selectedDate),
+            onValueChange = {},
+            readOnly = true,
+            enabled = false,
+            label = { Text(label) },
+            trailingIcon = {
+                Icon(Icons.Default.CalendarMonth, contentDescription = "انتخاب تاریخ")
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                disabledBorderColor = MaterialTheme.colorScheme.outline,
+                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                disabledTrailingIconColor = MaterialTheme.colorScheme.primary
+            )
+        )
+    }
 
     if (showDialog) {
         JalaliDatePickerDialog(
@@ -175,16 +211,136 @@ fun JalaliDatePickerDialog(
 }
 
 @Composable
-fun StatCard(title: String, value: String, color: Color, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f))
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(title, style = MaterialTheme.typography.labelMedium, color = color)
-            Spacer(Modifier.height(4.dp))
-            Text(value, style = MaterialTheme.typography.titleMedium, color = color)
+fun IconPicker(
+    selectedIcon: String,
+    onIconSelected: (String) -> Unit,
+    icons: List<ItemIconOption> = ItemIcons.all,
+    label: String = "آیکون",
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Text(label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(bottom = 8.dp))
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(6),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.heightIn(max = 160.dp)
+        ) {
+            items(icons) { option ->
+                val selected = option.key == selectedIcon
+                Surface(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clickable { onIconSelected(option.key) },
+                    shape = CircleShape,
+                    color = if (selected) MaterialTheme.colorScheme.primaryContainer
+                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
+                    shadowElevation = if (selected) 4.dp else 1.dp
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            option.icon,
+                            contentDescription = option.label,
+                            tint = if (selected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+            }
         }
+    }
+}
+
+@Composable
+fun ItemIconBadge(
+    iconKey: String,
+    tint: Color = MaterialTheme.colorScheme.primary,
+    modifier: Modifier = Modifier,
+    size: Int = 40
+) {
+    Surface(
+        modifier = modifier.size(size.dp),
+        shape = CircleShape,
+        color = tint.copy(alpha = 0.12f),
+        shadowElevation = 2.dp
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                ItemIcons.resolve(iconKey),
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size((size * 0.55f).dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun StatCard(
+    title: String,
+    value: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null
+) {
+    Card(
+        modifier = modifier.shadow(6.dp, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            color.copy(alpha = 0.18f),
+                            color.copy(alpha = 0.08f)
+                        )
+                    )
+                )
+                .padding(16.dp)
+        ) {
+            Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    icon?.let {
+                        Icon(it, null, tint = color, modifier = Modifier.size(18.dp))
+                    }
+                    Text(title, style = MaterialTheme.typography.labelMedium, color = color)
+                }
+                Spacer(Modifier.height(6.dp))
+                Text(value, style = MaterialTheme.typography.titleMedium, color = color)
+            }
+        }
+    }
+}
+
+@Composable
+fun ElevatedCard(
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val cardModifier = modifier
+        .fillMaxWidth()
+        .shadow(8.dp, RoundedCornerShape(16.dp))
+        .clip(RoundedCornerShape(16.dp))
+        .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+
+    Card(
+        modifier = cardModifier,
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(Modifier.padding(16.dp), content = content)
     }
 }
 
@@ -200,14 +356,15 @@ fun ConfirmDialog(
     title: String,
     message: String,
     onConfirm: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    confirmLabel: String = "بله"
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = { Text(message) },
         confirmButton = {
-            TextButton(onClick = onConfirm) { Text("بله") }
+            TextButton(onClick = onConfirm) { Text(confirmLabel) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("خیر") }

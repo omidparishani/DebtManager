@@ -106,6 +106,13 @@ fun SettingsScreen(viewModel: MainViewModel, navController: NavController) {
             }
 
             HorizontalDivider()
+            Text("پروفایل", style = MaterialTheme.typography.titleMedium)
+            OutlinedButton(
+                onClick = { navController.navigate(com.debtmanager.app.ui.navigation.Screen.Profile.route) },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("ویرایش پروفایل و اعلان‌ها") }
+
+            HorizontalDivider()
             Text("پشتیبان‌گیری", style = MaterialTheme.typography.titleMedium)
             Button(
                 onClick = {
@@ -126,6 +133,30 @@ fun SettingsScreen(viewModel: MainViewModel, navController: NavController) {
                 onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) },
                 modifier = Modifier.fillMaxWidth()
             ) { Text("بازیابی از JSON") }
+
+            HorizontalDivider()
+            Text("خطرناک", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
+            var showClearConfirm by remember { mutableStateOf(false) }
+            OutlinedButton(
+                onClick = { showClearConfirm = true },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+            ) { Text("پاک کردن کل دیتابیس") }
+
+            if (showClearConfirm) {
+                ConfirmDialog(
+                    title = "پاک کردن همه داده‌ها",
+                    message = "تمام وام‌ها، چک‌ها، بدهی‌ها، اقساط دوره‌ای و تاریخچه پرداخت حذف می‌شود. این عمل غیرقابل بازگشت است. ادامه می‌دهید؟",
+                    confirmLabel = "بله، پاک شود",
+                    onConfirm = {
+                        viewModel.clearAllData {
+                            showClearConfirm = false
+                            snackbarMessage = "دیتابیس با موفقیت پاک شد"
+                        }
+                    },
+                    onDismiss = { showClearConfirm = false }
+                )
+            }
 
             HorizontalDivider()
             Text("مدیریت بدهی", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -7,8 +7,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -24,12 +26,16 @@ import com.debtmanager.app.viewmodel.MainViewModel
 fun RecurringScreen(viewModel: MainViewModel) {
     val payments by viewModel.recurring.collectAsState()
     var showAdd by remember { mutableStateOf(false) }
+    var editTarget by remember { mutableStateOf<RecurringPayment?>(null) }
     var deleteTarget by remember { mutableStateOf<RecurringPayment?>(null) }
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("اقساط دوره‌ای") }) },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAdd = true }) { Icon(Icons.Default.Add, "افزودن") }
+            FloatingActionButton(
+                onClick = { showAdd = true },
+                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
+            ) { Icon(Icons.Default.Add, "افزودن") }
         }
     ) { padding ->
         if (payments.isEmpty()) {
@@ -40,6 +46,7 @@ fun RecurringScreen(viewModel: MainViewModel) {
                     RecurringCard(
                         payment = payment,
                         onMarkPaid = { viewModel.markRecurringPaid(payment, System.currentTimeMillis()) {} },
+                        onEdit = { editTarget = payment },
                         onDelete = { deleteTarget = payment }
                     )
                 }
@@ -47,8 +54,13 @@ fun RecurringScreen(viewModel: MainViewModel) {
         }
     }
 
-    if (showAdd) RecurringFormDialog(onDismiss = { showAdd = false }) { payment ->
+    if (showAdd) RecurringFormDialog(null, onDismiss = { showAdd = false }) { payment ->
         viewModel.addRecurring(payment) { showAdd = false }
+    }
+    editTarget?.let { payment ->
+        RecurringFormDialog(payment, onDismiss = { editTarget = null }) { updated ->
+            viewModel.updateRecurring(updated) { editTarget = null }
+        }
     }
     deleteTarget?.let { payment ->
         ConfirmDialog("حذف", "آیا مطمئن هستید؟",
@@ -58,27 +70,31 @@ fun RecurringScreen(viewModel: MainViewModel) {
 }
 
 @Composable
-fun RecurringCard(payment: RecurringPayment, onMarkPaid: () -> Unit, onDelete: () -> Unit) {
+fun RecurringCard(payment: RecurringPayment, onMarkPaid: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
     val freq = PaymentFrequency.entries.find { it.name == payment.frequency }?.label ?: payment.frequency
     val status = getInstallmentStatus(payment.nextDueDate, false)
 
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp)) {
-            Text(payment.title, fontWeight = FontWeight.Bold)
-            AmountText(payment.amount)
-            Text("دوره: $freq")
-            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                Text("سررسید بعدی: ")
-                DateText(payment.nextDueDate, short = true)
-            }
-            if (payment.category.isNotBlank()) Text("دسته: ${payment.category}")
-            StatusChip(status)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = onMarkPaid) {
-                    Icon(Icons.Default.Check, null)
-                    Text("پرداخت شد")
+    ElevatedCard {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
+            ItemIconBadge(payment.icon.ifBlank { "money" })
+            Column(Modifier.weight(1f)) {
+                Text(payment.title, fontWeight = FontWeight.Bold)
+                AmountText(payment.amount)
+                Text("دوره: $freq")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("سررسید بعدی: ")
+                    DateText(payment.nextDueDate, short = true)
                 }
-                IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, "حذف") }
+                if (payment.category.isNotBlank()) Text("دسته: ${payment.category}")
+                StatusChip(status)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onMarkPaid) {
+                        Icon(Icons.Default.Check, null)
+                        Text("پرداخت شد")
+                    }
+                    IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, "ویرایش") }
+                    IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, "حذف") }
+                }
             }
         }
     }
@@ -86,39 +102,52 @@ fun RecurringCard(payment: RecurringPayment, onMarkPaid: () -> Unit, onDelete: (
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RecurringFormDialog(onDismiss: () -> Unit, onSave: (RecurringPayment) -> Unit) {
-    var title by remember { mutableStateOf("") }
-    var amount by remember { mutableStateOf("") }
-    var frequency by remember { mutableStateOf(PaymentFrequency.MONTHLY.name) }
-    var nextDueDate by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    var category by remember { mutableStateOf("") }
+fun RecurringFormDialog(existing: RecurringPayment?, onDismiss: () -> Unit, onSave: (RecurringPayment) -> Unit) {
+    var title by remember { mutableStateOf(existing?.title ?: "") }
+    var amount by remember { mutableStateOf(existing?.amount?.toString() ?: "") }
+    var frequency by remember { mutableStateOf(existing?.frequency ?: PaymentFrequency.MONTHLY.name) }
+    var nextDueDate by remember { mutableLongStateOf(existing?.nextDueDate ?: System.currentTimeMillis()) }
+    var category by remember { mutableStateOf(existing?.category ?: "") }
+    var icon by remember { mutableStateOf(existing?.icon?.ifBlank { "money" } ?: "money") }
     var expanded by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("افزودن قسط دوره‌ای") },
+        title = { Text(if (existing == null) "افزودن قسط دوره‌ای" else "ویرایش قسط دوره‌ای") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(title, { title = it }, label = { Text("عنوان *") }, modifier = Modifier.fillMaxWidth())
-                AmountTextField(amount, { amount = it }, "مبلغ (ریال) *")
-                ExposedDropdownMenuBox(expanded, { expanded = it }) {
-                    val label = PaymentFrequency.entries.find { it.name == frequency }?.label ?: ""
-                    OutlinedTextField(label, {}, readOnly = true, label = { Text("دوره") }, modifier = Modifier.menuAnchor().fillMaxWidth())
-                    ExposedDropdownMenu(expanded, { expanded = false }) {
-                        PaymentFrequency.entries.forEach { f ->
-                            DropdownMenuItem(text = { Text(f.label) }, onClick = { frequency = f.name; expanded = false })
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                item { OutlinedTextField(title, { title = it }, label = { Text("عنوان *") }, modifier = Modifier.fillMaxWidth()) }
+                item { AmountTextField(amount, { amount = it }, "مبلغ (ریال) *") }
+                item {
+                    ExposedDropdownMenuBox(expanded, { expanded = it }) {
+                        val label = PaymentFrequency.entries.find { it.name == frequency }?.label ?: ""
+                        OutlinedTextField(label, {}, readOnly = true, label = { Text("دوره") }, modifier = Modifier.menuAnchor().fillMaxWidth())
+                        ExposedDropdownMenu(expanded, { expanded = false }) {
+                            PaymentFrequency.entries.forEach { f ->
+                                DropdownMenuItem(text = { Text(f.label) }, onClick = { frequency = f.name; expanded = false })
+                            }
                         }
                     }
                 }
-                JalaliDatePickerField(nextDueDate, { nextDueDate = it }, "تاریخ بعدی پرداخت")
-                OutlinedTextField(category, { category = it }, label = { Text("دسته (مثلاً بیمه)") }, modifier = Modifier.fillMaxWidth())
+                item { JalaliDatePickerField(nextDueDate, { nextDueDate = it }, "تاریخ بعدی پرداخت") }
+                item { OutlinedTextField(category, { category = it }, label = { Text("دسته (مثلاً بیمه)") }, modifier = Modifier.fillMaxWidth()) }
+                item { IconPicker(selectedIcon = icon, onIconSelected = { icon = it }, label = "آیکون") }
             }
         },
         confirmButton = {
             TextButton(onClick = {
                 val a = CurrencyUtil.parse(amount) ?: return@TextButton
                 if (title.isBlank()) return@TextButton
-                onSave(RecurringPayment(title = title, amount = a, frequency = frequency, nextDueDate = nextDueDate, category = category))
+                onSave(RecurringPayment(
+                    id = existing?.id ?: 0,
+                    title = title,
+                    amount = a,
+                    frequency = frequency,
+                    nextDueDate = nextDueDate,
+                    lastPaidDate = existing?.lastPaidDate,
+                    category = category,
+                    icon = icon
+                ))
             }) { Text("ذخیره") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }

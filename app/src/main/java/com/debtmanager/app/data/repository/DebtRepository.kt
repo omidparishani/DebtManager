@@ -25,7 +25,8 @@ class DebtRepository(
         installmentAmount: Long,
         startDate: Long,
         paymentDayOfMonth: Int,
-        notes: String = ""
+        notes: String = "",
+        icon: String = "account_balance"
     ): Long {
         val loanId = loanDao.insert(
             Loan(
@@ -35,7 +36,8 @@ class DebtRepository(
                 installmentAmount = installmentAmount,
                 startDate = startDate,
                 paymentDayOfMonth = paymentDayOfMonth,
-                notes = notes
+                notes = notes,
+                icon = icon
             )
         )
         generateInstallments(loanId, startDate, paymentDayOfMonth, installmentCount, installmentAmount)
@@ -173,6 +175,15 @@ class DebtRepository(
     fun getHistoryByType(type: String) = historyDao.getByType(type)
     fun getHistoryInRange(start: Long, end: Long) = historyDao.getInRange(start, end)
 
+    suspend fun clearAllData() {
+        loanDao.deleteAllInstallments()
+        loanDao.deleteAllLoans()
+        checkDao.deleteAll()
+        debtDao.deleteAll()
+        recurringDao.deleteAll()
+        historyDao.deleteAll()
+    }
+
     suspend fun getDashboardData(): DashboardData {
         val now = System.currentTimeMillis()
         val monthStart = PersianDateUtil.startOfMonth(now)
@@ -209,7 +220,8 @@ data class UpcomingItem(
     val dueDate: Long,
     val type: PaymentType,
     val referenceId: Long,
-    val status: InstallmentStatus
+    val status: InstallmentStatus,
+    val icon: String = ""
 )
 
 fun getInstallmentStatus(dueDate: Long, isPaid: Boolean, now: Long = System.currentTimeMillis()): InstallmentStatus {

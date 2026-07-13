@@ -33,7 +33,10 @@ fun ChecksScreen(viewModel: MainViewModel) {
     Scaffold(
         topBar = { TopAppBar(title = { Text("چک‌های صادرشده") }) },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAdd = true }) { Icon(Icons.Default.Add, "افزودن") }
+            FloatingActionButton(
+                onClick = { showAdd = true },
+                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
+            ) { Icon(Icons.Default.Add, "افزودن") }
         }
     ) { padding ->
         if (checks.isEmpty()) {
@@ -81,22 +84,26 @@ fun ChecksScreen(viewModel: MainViewModel) {
 
 @Composable
 fun CheckCard(check: CheckEntity, onEdit: () -> Unit, onDelete: () -> Unit, onCollect: () -> Unit) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(check.payee, fontWeight = FontWeight.Bold)
-                StatusChip(checkStatusLabel(check.status), checkStatusColor(check.status))
-            }
-            AmountText(check.amount)
-            DateText(check.dueDate)
-            if (check.bankName.isNotBlank()) Text("بانک: ${check.bankName}")
-            if (check.checkNumber.isNotBlank()) Text("شماره: ${check.checkNumber}")
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                if (check.status == CheckStatus.PENDING.name) {
-                    TextButton(onClick = onCollect) { Text("وصول") }
+    ElevatedCard {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
+            ItemIconBadge(check.icon.ifBlank { "receipt" })
+            Column(Modifier.weight(1f)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(check.payee, fontWeight = FontWeight.Bold)
+                    StatusChip(checkStatusLabel(check.status), checkStatusColor(check.status))
                 }
-                IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, "ویرایش") }
-                IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, "حذف") }
+                AmountText(check.amount)
+                DateText(check.dueDate)
+                if (check.bankName.isNotBlank()) Text("بانک: ${check.bankName}")
+                if (check.checkNumber.isNotBlank()) Text("شماره: ${check.checkNumber}")
+                if (check.description.isNotBlank()) Text(check.description, style = MaterialTheme.typography.bodySmall)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    if (check.status == CheckStatus.PENDING.name) {
+                        TextButton(onClick = onCollect) { Text("وصول") }
+                    }
+                    IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, "ویرایش") }
+                    IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, "حذف") }
+                }
             }
         }
     }
@@ -113,6 +120,7 @@ fun CheckFormDialog(existing: CheckEntity?, onDismiss: () -> Unit, onSave: (Chec
     var description by remember { mutableStateOf(existing?.description ?: "") }
     var extraInfo by remember { mutableStateOf(existing?.extraInfo ?: "") }
     var status by remember { mutableStateOf(existing?.status ?: CheckStatus.PENDING.name) }
+    var icon by remember { mutableStateOf(existing?.icon?.ifBlank { "receipt" } ?: "receipt") }
     var statusExpanded by remember { mutableStateOf(false) }
 
     AlertDialog(
@@ -127,6 +135,7 @@ fun CheckFormDialog(existing: CheckEntity?, onDismiss: () -> Unit, onSave: (Chec
                 item { OutlinedTextField(payee, { payee = it }, label = { Text("گیرنده *") }, modifier = Modifier.fillMaxWidth()) }
                 item { OutlinedTextField(description, { description = it }, label = { Text("توضیحات") }, modifier = Modifier.fillMaxWidth()) }
                 item { OutlinedTextField(extraInfo, { extraInfo = it }, label = { Text("اطلاعات تکمیلی") }, modifier = Modifier.fillMaxWidth()) }
+                item { IconPicker(selectedIcon = icon, onIconSelected = { icon = it }, label = "آیکون") }
                 if (existing != null) {
                     item {
                         ExposedDropdownMenuBox(statusExpanded, { statusExpanded = it }) {
@@ -156,7 +165,8 @@ fun CheckFormDialog(existing: CheckEntity?, onDismiss: () -> Unit, onSave: (Chec
                     id = existing?.id ?: 0,
                     amount = a, dueDate = dueDate, bankName = bankName,
                     checkNumber = checkNumber, payee = payee,
-                    description = description, extraInfo = extraInfo, status = status
+                    description = description, extraInfo = extraInfo, status = status,
+                    icon = icon
                 ))
             }) { Text("ذخیره") }
         },

@@ -115,6 +115,7 @@ fun DebtManagerNavHost(viewModel: MainViewModel) {
             composable(Screen.Recurring.route) { RecurringScreen(viewModel) }
             composable(Screen.History.route) { HistoryScreen(viewModel, navController) }
             composable(Screen.Settings.route) { SettingsScreen(viewModel, navController) }
+            composable(Screen.Profile.route) { ProfileScreen(viewModel, navController) }
             composable(
                 route = Screen.LoanDetail.route,
                 arguments = listOf(navArgument("loanId") { type = NavType.LongType })

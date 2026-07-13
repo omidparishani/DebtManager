@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,12 +27,16 @@ import com.debtmanager.app.viewmodel.MainViewModel
 fun LoansScreen(viewModel: MainViewModel, navController: NavController) {
     val loans by viewModel.loans.collectAsState()
     var showAdd by remember { mutableStateOf(false) }
+    var editTarget by remember { mutableStateOf<Loan?>(null) }
     var deleteTarget by remember { mutableStateOf<Loan?>(null) }
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("وام‌ها") }) },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAdd = true }) {
+            FloatingActionButton(
+                onClick = { showAdd = true },
+                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
+            ) {
                 Icon(Icons.Default.Add, "افزودن")
             }
         }
@@ -44,6 +49,7 @@ fun LoansScreen(viewModel: MainViewModel, navController: NavController) {
                     LoanCard(
                         loan = loan,
                         onClick = { navController.navigate(Screen.LoanDetail.createRoute(loan.id)) },
+                        onEdit = { editTarget = loan },
                         onDelete = { deleteTarget = loan }
                     )
                 }
@@ -52,6 +58,11 @@ fun LoansScreen(viewModel: MainViewModel, navController: NavController) {
     }
 
     if (showAdd) AddLoanDialog(viewModel, onDismiss = { showAdd = false }, onDone = { showAdd = false })
+    editTarget?.let { loan ->
+        EditLoanDialog(loan, onDismiss = { editTarget = null }) { updated ->
+            viewModel.updateLoan(updated) { editTarget = null }
+        }
+    }
     deleteTarget?.let { loan ->
         ConfirmDialog("حذف وام", "آیا از حذف «${loan.title}» مطمئن هستید؟",
             onConfirm = { viewModel.deleteLoan(loan) { deleteTarget = null } },
@@ -60,22 +71,30 @@ fun LoansScreen(viewModel: MainViewModel, navController: NavController) {
 }
 
 @Composable
-fun LoanCard(loan: Loan, onClick: () -> Unit, onDelete: () -> Unit) {
+fun LoanCard(loan: Loan, onClick: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
     val remaining = loan.totalAmount - (loan.paidCount * loan.installmentAmount)
     val progress = if (loan.installmentCount > 0) loan.paidCount.toFloat() / loan.installmentCount else 0f
 
-    Card(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
-        Column(Modifier.padding(16.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+    ElevatedCard {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            ItemIconBadge(loan.icon.ifBlank { "account_balance" })
+            Column(
+                Modifier
+                    .weight(1f)
+                    .clickable(onClick = onClick)
+            ) {
                 Text(loan.title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(4.dp))
+                Text("مبلغ کل: ${CurrencyUtil.format(loan.totalAmount)}")
+                Text("قسط: ${PersianDateUtil.toPersianDigits(loan.paidCount)} از ${PersianDateUtil.toPersianDigits(loan.installmentCount)}")
+                Text("باقی‌مانده: ${CurrencyUtil.format(remaining)}")
+                Spacer(Modifier.height(8.dp))
+                LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
+            }
+            Column {
+                IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, "ویرایش") }
                 IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, "حذف") }
             }
-            Spacer(Modifier.height(4.dp))
-            Text("مبلغ کل: ${CurrencyUtil.format(loan.totalAmount)}")
-            Text("قسط: ${PersianDateUtil.toPersianDigits(loan.paidCount)} از ${PersianDateUtil.toPersianDigits(loan.installmentCount)}")
-            Text("باقی‌مانده: ${CurrencyUtil.format(remaining)}")
-            Spacer(Modifier.height(8.dp))
-            LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
         }
     }
 }
@@ -89,6 +108,7 @@ fun AddLoanDialog(viewModel: MainViewModel, onDismiss: () -> Unit, onDone: () ->
     var startDate by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var paymentDay by remember { mutableStateOf("1") }
     var notes by remember { mutableStateOf("") }
+    var icon by remember { mutableStateOf("account_balance") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -102,6 +122,7 @@ fun AddLoanDialog(viewModel: MainViewModel, onDismiss: () -> Unit, onDone: () ->
                 item { JalaliDatePickerField(startDate, { startDate = it }, "تاریخ شروع") }
                 item { AmountTextField(paymentDay, { paymentDay = it }, "روز پرداخت ماهانه") }
                 item { OutlinedTextField(notes, { notes = it }, label = { Text("توضیحات") }, modifier = Modifier.fillMaxWidth()) }
+                item { IconPicker(selectedIcon = icon, onIconSelected = { icon = it }, label = "آیکون") }
             }
         },
         confirmButton = {
@@ -111,7 +132,38 @@ fun AddLoanDialog(viewModel: MainViewModel, onDismiss: () -> Unit, onDone: () ->
                 val amount = CurrencyUtil.parse(installmentAmount) ?: return@TextButton
                 val day = paymentDay.toIntOrNull() ?: 1
                 if (title.isBlank()) return@TextButton
-                viewModel.addLoan(title, total, count, amount, startDate, day, notes, onDone)
+                viewModel.addLoan(title, total, count, amount, startDate, day, notes, icon, onDone)
+            }) { Text("ذخیره") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
+    )
+}
+
+@Composable
+fun EditLoanDialog(loan: Loan, onDismiss: () -> Unit, onSave: (Loan) -> Unit) {
+    var title by remember { mutableStateOf(loan.title) }
+    var notes by remember { mutableStateOf(loan.notes) }
+    var icon by remember { mutableStateOf(loan.icon.ifBlank { "account_balance" }) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("ویرایش وام") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(title, { title = it }, label = { Text("عنوان *") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(notes, { notes = it }, label = { Text("توضیحات") }, modifier = Modifier.fillMaxWidth())
+                IconPicker(selectedIcon = icon, onIconSelected = { icon = it }, label = "آیکون")
+                Text(
+                    "برای تغییر مبلغ یا اقساط، وام را حذف و دوباره ثبت کنید.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                if (title.isBlank()) return@TextButton
+                onSave(loan.copy(title = title, notes = notes, icon = icon))
             }) { Text("ذخیره") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
@@ -139,20 +191,23 @@ fun LoanDetailScreen(viewModel: MainViewModel, loanId: Long, onBack: () -> Unit)
         LazyColumn(Modifier.padding(padding).fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             loan?.let { l ->
                 item {
-                    Card(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("مبلغ کل: ${CurrencyUtil.format(l.totalAmount)}")
-                            Text("هر قسط: ${CurrencyUtil.format(l.installmentAmount)}")
-                            val remaining = l.totalAmount - l.paidCount * l.installmentAmount
-                            Text("باقی‌مانده: ${CurrencyUtil.format(remaining)}", fontWeight = FontWeight.Bold)
+                    ElevatedCard {
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            ItemIconBadge(l.icon.ifBlank { "account_balance" })
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text("مبلغ کل: ${CurrencyUtil.format(l.totalAmount)}")
+                                Text("هر قسط: ${CurrencyUtil.format(l.installmentAmount)}")
+                                val remaining = l.totalAmount - l.paidCount * l.installmentAmount
+                                Text("باقی‌مانده: ${CurrencyUtil.format(remaining)}", fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
             }
             items(installments, key = { it.id }) { inst ->
                 val status = com.debtmanager.app.data.repository.getInstallmentStatus(inst.dueDate, inst.isPaid)
-                Card(Modifier.fillMaxWidth()) {
-                    Row(Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                ElevatedCard {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Column {
                             DateText(inst.dueDate)
                             AmountText(inst.amount)

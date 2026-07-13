@@ -15,7 +15,8 @@ data class Loan(
     val startDate: Long,
     val paymentDayOfMonth: Int,
     val paidCount: Int = 0,
-    val notes: String = ""
+    val notes: String = "",
+    val icon: String = "account_balance"
 )
 
 @Entity(
@@ -50,7 +51,8 @@ data class CheckEntity(
     val payee: String,
     val description: String = "",
     val extraInfo: String = "",
-    val status: String = CheckStatus.PENDING.name
+    val status: String = CheckStatus.PENDING.name,
+    val icon: String = "receipt"
 )
 
 enum class CheckStatus {
@@ -65,7 +67,8 @@ data class Debt(
     val totalAmount: Long,
     val paidAmount: Long = 0,
     val date: Long,
-    val description: String = ""
+    val description: String = "",
+    val icon: String = ""
 )
 
 enum class DebtCategory(val label: String) {
@@ -82,7 +85,8 @@ data class RecurringPayment(
     val frequency: String,
     val nextDueDate: Long,
     val lastPaidDate: Long? = null,
-    val category: String = ""
+    val category: String = "",
+    val icon: String = "money"
 )
 
 enum class PaymentFrequency(val label: String, val months: Int) {
