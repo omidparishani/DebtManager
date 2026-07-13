@@ -195,7 +195,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }.sortedBy { it.dueDate }
 
-        DashboardUiState(
+        return  DashboardUiState(
             monthDueTotal = monthDueTotal,
             monthPaidTotal = monthPaidTotal,
             unpaidCount = unpaidCount,
