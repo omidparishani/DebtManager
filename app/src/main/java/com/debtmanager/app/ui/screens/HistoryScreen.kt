@@ -1,6 +1,8 @@
 package com.debtmanager.app.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -52,8 +54,18 @@ fun HistoryScreen(viewModel: MainViewModel, navController: NavController) {
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(selected = filterType == null, onClick = { filterType = null }, label = { Text("همه") })
+            // فیلترها به صورت اسکرول افقی تا متن‌ها به هم نریزند
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = filterType == null,
+                    onClick = { filterType = null },
+                    label = { Text("همه") }
+                )
                 PaymentType.entries.forEach { type ->
                     FilterChip(
                         selected = filterType == type.name,
@@ -62,8 +74,13 @@ fun HistoryScreen(viewModel: MainViewModel, navController: NavController) {
                     )
                 }
             }
-            TextButton(onClick = { sortAscending = !sortAscending }) {
-                Text(if (sortAscending) "مرتب‌سازی: قدیمی‌ترین" else "مرتب‌سازی: جدیدترین")
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(onClick = { sortAscending = !sortAscending }) {
+                    Text(if (sortAscending) "قدیمی‌ترین" else "جدیدترین")
+                }
             }
         }
         if (filtered.isEmpty()) {

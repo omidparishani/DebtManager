@@ -72,9 +72,86 @@ fun DashboardScreen(viewModel: MainViewModel, navController: NavController) {
                 }
             }
 
-            item {
-                Text("خلاصه ماه جاری", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(8.dp))
+                        item {
+                val accounts by viewModel.bankAccounts.collectAsState(initial = emptyList())
+                val totalBalance = accounts.sumOf { it.balance }
+                val remaining = state.remaining
+                val net = totalBalance - remaining
+
+                ElevatedCard(
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    ),
+                    shape = MaterialTheme.shapes.large
+                ) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(
+                            "وضعیت مالی کلی",
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Column {
+                                Text("موجودی حساب‌ها", color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
+                                Text(
+                                    CurrencyUtil.formatWithoutUnit(totalBalance) + " ریال",
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text("مانده بدهی‌ها", color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
+                                Text(
+                                    CurrencyUtil.formatWithoutUnit(remaining) + " ریال",
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                            }
+                        }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.3f))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("خالص تقریبی", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Medium)
+                            Text(
+                                CurrencyUtil.formatWithoutUnit(net) + " ریال",
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                        }
+                    }
+                }
+            }
+
+item {
+                val selectedMonth by viewModel.selectedMonthMillis.collectAsState()
+                val j = PersianDateUtil.fromTimestamp(selectedMonth)
+                val monthTitle = "${PersianDateUtil.monthName(j.month)} ${PersianDateUtil.toPersianDigits(j.year)}"
+
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                    shape = MaterialTheme.shapes.large
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        IconButton(onClick = { viewModel.shiftSelectedMonth(-1) }) {
+                            Icon(Icons.Default.ChevronRight, "ماه قبل") // RTL: right goes previous
+                        }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("خلاصه ماه", style = MaterialTheme.typography.labelMedium)
+                            Text(monthTitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        }
+                        IconButton(onClick = { viewModel.shiftSelectedMonth(1) }) {
+                            Icon(Icons.Default.ChevronLeft, "ماه بعد")
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     StatCard(
                         "سررسید ماه", CurrencyUtil.formatWithoutUnit(state.monthDueTotal) + " ریال",

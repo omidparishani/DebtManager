@@ -38,7 +38,8 @@ data class LoanInstallment(
     val amount: Long,
     val isPaid: Boolean = false,
     val paidDate: Long? = null,
-    val paidAmount: Long? = null
+    val paidAmount: Long? = null,
+    val bankAccountId: Long? = null
 )
 
 @Entity(tableName = "checks")
@@ -52,7 +53,8 @@ data class CheckEntity(
     val description: String = "",
     val extraInfo: String = "",
     val status: String = CheckStatus.PENDING.name,
-    val icon: String = "receipt"
+    val icon: String = "receipt",
+    val bankAccountId: Long? = null
 )
 
 enum class CheckStatus {
@@ -68,7 +70,10 @@ data class Debt(
     val paidAmount: Long = 0,
     val date: Long,
     val description: String = "",
-    val icon: String = ""
+    val icon: String = "",
+    /** true = بستانکاری (طلب شما از دیگران), false = بدهکاری (بدهی شما به دیگران) */
+    val isCredit: Boolean = false,
+    val contactId: Long? = null
 )
 
 enum class DebtCategory(val label: String) {
@@ -86,7 +91,8 @@ data class RecurringPayment(
     val nextDueDate: Long,
     val lastPaidDate: Long? = null,
     val category: String = "",
-    val icon: String = "money"
+    val icon: String = "money",
+    val bankAccountId: Long? = null
 )
 
 enum class PaymentFrequency(val label: String, val months: Int) {
@@ -102,16 +108,77 @@ data class PaymentHistory(
     val referenceId: Long,
     val amount: Long,
     val date: Long,
-    val description: String = ""
+    val description: String = "",
+    val bankAccountId: Long? = null
 )
 
 enum class PaymentType(val label: String) {
     LOAN("وام"),
     CHECK("چک"),
     DEBT("بدهی"),
-    RECURRING("قسط دوره‌ای")
+    CREDIT("بستانکاری"),
+    RECURRING("قسط دوره‌ای"),
+    DEPOSIT("واریز"),
+    WITHDRAW("برداشت"),
+    TRANSFER("انتقال")
 }
 
 enum class InstallmentStatus {
     PAID, OVERDUE, UPCOMING
 }
+
+// ========== NEW: Contacts / Persons ==========
+@Entity(tableName = "contacts")
+data class Contact(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val phone: String = "",
+    val notes: String = "",
+    val type: String = ContactType.PERSON.name, // PERSON, STORE, OTHER
+    val icon: String = "person"
+)
+
+enum class ContactType(val label: String) {
+    PERSON("فرد"),
+    STORE("فروشگاه"),
+    OTHER("سایر")
+}
+
+// ========== NEW: Bank Accounts ==========
+@Entity(tableName = "bank_accounts")
+data class BankAccount(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,                 // e.g. "حساب جاری ملت"
+    val bankName: String = "",
+    val accountNumber: String = "",
+    val balance: Long = 0,
+    val colorHex: String = "#1976D2",
+    val icon: String = "account_balance",
+    val isDefault: Boolean = false,
+    val notes: String = ""
+)
+
+// ========== NEW: Account Transactions (واریز / برداشت / پرداخت) ==========
+@Entity(
+    tableName = "account_transactions",
+    foreignKeys = [
+        ForeignKey(
+            entity = BankAccount::class,
+            parentColumns = ["id"],
+            childColumns = ["accountId"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [Index("accountId"), Index("date")]
+)
+data class AccountTransaction(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val accountId: Long,
+    val type: String,                 // DEPOSIT, WITHDRAW, TRANSFER, PAYMENT
+    val amount: Long,
+    val date: Long,
+    val description: String = "",
+    val relatedType: String? = null,  // LOAN, DEBT, CHECK, RECURRING ...
+    val relatedId: Long? = null,
+    val toAccountId: Long? = null     // for transfers
+)

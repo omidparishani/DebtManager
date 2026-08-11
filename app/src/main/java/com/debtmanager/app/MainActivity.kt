@@ -9,6 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -52,6 +53,7 @@ class MainActivity : FragmentActivity() {
         setContent {
             val vm: MainViewModel = viewModel()
             val darkMode by vm.darkMode.collectAsState()
+            val themeColor by vm.themeColor.collectAsState()
             val pinEnabled by vm.pinEnabled.collectAsState()
             var unlocked by remember { mutableStateOf(!pinEnabled) }
 
@@ -61,7 +63,7 @@ class MainActivity : FragmentActivity() {
             }
 
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                DebtManagerTheme(darkTheme = darkMode) {
+                DebtManagerTheme(darkTheme = darkMode, themeColorKey = themeColor) {
                     if (pinEnabled && !unlocked) {
                         LockScreen(vm) { unlocked = true }
                     } else {
@@ -83,6 +85,7 @@ fun DebtManagerNavHost(viewModel: MainViewModel) {
     val currentNavItem = bottomNavItemForRoute(currentRoute)
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             if (currentNavItem != null) {
                 MainTopBar(
@@ -116,6 +119,16 @@ fun DebtManagerNavHost(viewModel: MainViewModel) {
             composable(Screen.Loans.route) { LoansScreen(viewModel, navController) }
             composable(Screen.Checks.route) { ChecksScreen(viewModel) }
             composable(Screen.Debts.route) { DebtsScreen(viewModel) }
+            composable(Screen.Contacts.route) { ContactsScreen(viewModel, navController) }
+            composable(
+                route = Screen.ContactDetail.route,
+                arguments = listOf(navArgument("contactId") { type = NavType.LongType })
+            ) { entry ->
+                val id = entry.arguments?.getLong("contactId") ?: 0L
+                ContactDetailScreen(viewModel, id, navController)
+            }
+
+            composable(Screen.Accounts.route) { AccountsScreen(viewModel) }
             composable(Screen.Recurring.route) { RecurringScreen(viewModel) }
             composable(Screen.History.route) { HistoryScreen(viewModel, navController) }
             composable(Screen.Settings.route) { SettingsScreen(viewModel, navController) }

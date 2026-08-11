@@ -18,6 +18,7 @@ class SettingsRepository(private val context: Context) {
         val VIBRATION_ENABLED = booleanPreferencesKey("vibration_enabled")
         val REMIND_ON_DUE_DAY = booleanPreferencesKey("remind_on_due_day")
         val DARK_MODE = booleanPreferencesKey("dark_mode")
+        private val THEME_COLOR = stringPreferencesKey("theme_color")
         val PIN_ENABLED = booleanPreferencesKey("pin_enabled")
         val PIN_HASH = stringPreferencesKey("pin_hash")
         val BIOMETRIC_ENABLED = booleanPreferencesKey("biometric_enabled")
@@ -33,6 +34,7 @@ class SettingsRepository(private val context: Context) {
     val vibrationEnabled: Flow<Boolean> = context.dataStore.data.map { it[VIBRATION_ENABLED] ?: true }
     val remindOnDueDay: Flow<Boolean> = context.dataStore.data.map { it[REMIND_ON_DUE_DAY] ?: true }
     val darkMode: Flow<Boolean> = context.dataStore.data.map { it[DARK_MODE] ?: false }
+    val themeColor: Flow<String> = context.dataStore.data.map { it[THEME_COLOR] ?: "teal" }
     val pinEnabled: Flow<Boolean> = context.dataStore.data.map { it[PIN_ENABLED] ?: false }
     val pinHash: Flow<String?> = context.dataStore.data.map { it[PIN_HASH] }
     val biometricEnabled: Flow<Boolean> = context.dataStore.data.map { it[BIOMETRIC_ENABLED] ?: false }
@@ -45,6 +47,10 @@ class SettingsRepository(private val context: Context) {
     suspend fun setNotificationSound(soundId: String) = edit { it[NOTIFICATION_SOUND] = soundId }
     suspend fun setVibrationEnabled(enabled: Boolean) = edit { it[VIBRATION_ENABLED] = enabled }
     suspend fun setRemindOnDueDay(enabled: Boolean) = edit { it[REMIND_ON_DUE_DAY] = enabled }
+    suspend fun setThemeColor(color: String) {
+        context.dataStore.edit { it[THEME_COLOR] = color }
+    }
+
     suspend fun setDarkMode(enabled: Boolean) = edit { it[DARK_MODE] = enabled }
     suspend fun setPinEnabled(enabled: Boolean) = edit { it[PIN_ENABLED] = enabled }
     suspend fun setPinHash(hash: String) = edit { it[PIN_HASH] = hash }

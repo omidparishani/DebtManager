@@ -16,9 +16,12 @@ import com.debtmanager.app.data.entity.*
         CheckEntity::class,
         Debt::class,
         RecurringPayment::class,
-        PaymentHistory::class
+        PaymentHistory::class,
+        Contact::class,
+        BankAccount::class,
+        AccountTransaction::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -27,6 +30,9 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun debtDao(): DebtDao
     abstract fun recurringPaymentDao(): RecurringPaymentDao
     abstract fun paymentHistoryDao(): PaymentHistoryDao
+    abstract fun contactDao(): ContactDao
+    abstract fun bankAccountDao(): BankAccountDao
+    abstract fun accountTransactionDao(): AccountTransactionDao
 
     companion object {
         @Volatile
@@ -41,13 +47,68 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // New columns on existing tables
+                try { db.execSQL("ALTER TABLE debts ADD COLUMN isCredit INTEGER NOT NULL DEFAULT 0") } catch (_: Exception) {}
+                try { db.execSQL("ALTER TABLE debts ADD COLUMN contactId INTEGER") } catch (_: Exception) {}
+                try { db.execSQL("ALTER TABLE loan_installments ADD COLUMN bankAccountId INTEGER") } catch (_: Exception) {}
+                try { db.execSQL("ALTER TABLE checks ADD COLUMN bankAccountId INTEGER") } catch (_: Exception) {}
+                try { db.execSQL("ALTER TABLE recurring_payments ADD COLUMN bankAccountId INTEGER") } catch (_: Exception) {}
+                try { db.execSQL("ALTER TABLE payment_history ADD COLUMN bankAccountId INTEGER") } catch (_: Exception) {}
+
+                // New tables
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS contacts (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        name TEXT NOT NULL,
+                        phone TEXT NOT NULL DEFAULT '',
+                        notes TEXT NOT NULL DEFAULT '',
+                        type TEXT NOT NULL DEFAULT 'PERSON',
+                        icon TEXT NOT NULL DEFAULT 'person'
+                    )
+                """.trimIndent())
+
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS bank_accounts (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        name TEXT NOT NULL,
+                        bankName TEXT NOT NULL DEFAULT '',
+                        accountNumber TEXT NOT NULL DEFAULT '',
+                        balance INTEGER NOT NULL DEFAULT 0,
+                        colorHex TEXT NOT NULL DEFAULT '#1976D2',
+                        icon TEXT NOT NULL DEFAULT 'account_balance',
+                        isDefault INTEGER NOT NULL DEFAULT 0,
+                        notes TEXT NOT NULL DEFAULT ''
+                    )
+                """.trimIndent())
+
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS account_transactions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        accountId INTEGER NOT NULL,
+                        type TEXT NOT NULL,
+                        amount INTEGER NOT NULL,
+                        date INTEGER NOT NULL,
+                        description TEXT NOT NULL DEFAULT '',
+                        relatedType TEXT,
+                        relatedId INTEGER,
+                        toAccountId INTEGER,
+                        FOREIGN KEY(accountId) REFERENCES bank_accounts(id) ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_account_transactions_accountId ON account_transactions(accountId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_account_transactions_date ON account_transactions(date)")
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
                     "debt_manager.db"
-                ).addMigrations(MIGRATION_1_2)
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .fallbackToDestructiveMigration()
                     .build().also { INSTANCE = it }
             }

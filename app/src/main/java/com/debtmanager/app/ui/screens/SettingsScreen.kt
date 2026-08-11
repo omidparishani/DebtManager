@@ -3,6 +3,7 @@ package com.debtmanager.app.ui.screens
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -27,6 +28,7 @@ import java.io.File
 fun SettingsScreen(viewModel: MainViewModel, navController: NavController) {
     val context = LocalContext.current
     val darkMode by viewModel.darkMode.collectAsState()
+    val themeColor by viewModel.themeColor.collectAsState()
     val reminderDays by viewModel.reminderDays.collectAsState()
     val reminderHour by viewModel.reminderHour.collectAsState()
     val notificationSound by viewModel.notificationSound.collectAsState()
@@ -78,6 +80,30 @@ fun SettingsScreen(viewModel: MainViewModel, navController: NavController) {
         ) {
             SettingsSection("ظاهر") {
                 SettingsSwitchRow("تم تاریک", darkMode) { viewModel.setDarkMode(it) }
+                Spacer(Modifier.height(12.dp))
+                Text("رنگ اصلی برنامه", style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(8.dp))
+                val colors = listOf(
+                    "teal" to "فیروزه‌ای",
+                    "blue" to "آبی",
+                    "purple" to "بنفش",
+                    "green" to "سبز",
+                    "orange" to "نارنجی",
+                    "red" to "قرمز",
+                    "indigo" to "نیلی"
+                )
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    colors.forEach { (key, label) ->
+                        FilterChip(
+                            selected = themeColor == key,
+                            onClick = { viewModel.setThemeColor(key) },
+                            label = { Text(label) }
+                        )
+                    }
+                }
             }
 
             SettingsSection("اعلان‌ها") {

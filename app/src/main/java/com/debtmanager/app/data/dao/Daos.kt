@@ -90,6 +90,9 @@ interface DebtDao {
     @Query("SELECT * FROM debts ORDER BY date DESC")
     fun getAllDebts(): Flow<List<Debt>>
 
+    @Query("SELECT * FROM debts ORDER BY date DESC")
+    suspend fun getAllDebtsOnce(): List<Debt>
+
     @Query("SELECT * FROM debts WHERE id = :id")
     suspend fun getDebtById(id: Long): Debt?
 
@@ -164,4 +167,80 @@ interface PaymentHistoryDao {
 
     @Query("DELETE FROM payment_history WHERE type = :type AND referenceId IN (:referenceIds)")
     suspend fun deleteByReferences(type: String, referenceIds: List<Long>)
+}
+
+
+@Dao
+interface ContactDao {
+    @Query("SELECT * FROM contacts ORDER BY name ASC")
+    fun getAll(): Flow<List<Contact>>
+
+    @Query("SELECT * FROM contacts WHERE id = :id")
+    suspend fun getById(id: Long): Contact?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(contact: Contact): Long
+
+    @Update
+    suspend fun update(contact: Contact)
+
+    @Delete
+    suspend fun delete(contact: Contact)
+
+    @Query("DELETE FROM contacts")
+    suspend fun deleteAll()
+}
+
+@Dao
+interface BankAccountDao {
+    @Query("SELECT * FROM bank_accounts ORDER BY isDefault DESC, name ASC")
+    fun getAll(): Flow<List<BankAccount>>
+
+    @Query("SELECT * FROM bank_accounts ORDER BY isDefault DESC, name ASC")
+    suspend fun getAllOnce(): List<BankAccount>
+
+    @Query("SELECT * FROM bank_accounts WHERE id = :id")
+    suspend fun getById(id: Long): BankAccount?
+
+    @Query("SELECT * FROM bank_accounts WHERE isDefault = 1 LIMIT 1")
+    suspend fun getDefault(): BankAccount?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(account: BankAccount): Long
+
+    @Update
+    suspend fun update(account: BankAccount)
+
+    @Delete
+    suspend fun delete(account: BankAccount)
+
+    @Query("UPDATE bank_accounts SET balance = balance + :delta WHERE id = :id")
+    suspend fun adjustBalance(id: Long, delta: Long)
+
+    @Query("DELETE FROM bank_accounts")
+    suspend fun deleteAll()
+}
+
+@Dao
+interface AccountTransactionDao {
+    @Query("SELECT * FROM account_transactions ORDER BY date DESC")
+    fun getAll(): Flow<List<AccountTransaction>>
+
+    @Query("SELECT * FROM account_transactions WHERE accountId = :accountId ORDER BY date DESC")
+    fun getByAccount(accountId: Long): Flow<List<AccountTransaction>>
+
+    @Query("SELECT * FROM account_transactions WHERE date >= :start AND date <= :end ORDER BY date DESC")
+    fun getInRange(start: Long, end: Long): Flow<List<AccountTransaction>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(tx: AccountTransaction): Long
+
+    @Update
+    suspend fun update(tx: AccountTransaction)
+
+    @Delete
+    suspend fun delete(tx: AccountTransaction)
+
+    @Query("DELETE FROM account_transactions")
+    suspend fun deleteAll()
 }

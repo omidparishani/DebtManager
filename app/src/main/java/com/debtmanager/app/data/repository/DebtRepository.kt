@@ -73,11 +73,12 @@ class DebtRepository(
         }
     }
 
-    suspend fun payInstallment(installment: LoanInstallment, paidAmount: Long, paidDate: Long) {
+    suspend fun payInstallment(installment: LoanInstallment, paidAmount: Long, paidDate: Long, bankAccountId: Long? = null) {
         val updated = installment.copy(
             isPaid = true,
             paidDate = paidDate,
-            paidAmount = paidAmount
+            paidAmount = paidAmount,
+            bankAccountId = bankAccountId
         )
         loanDao.updateInstallment(updated)
         val loan = loanDao.getLoanById(installment.loanId) ?: return
@@ -88,7 +89,8 @@ class DebtRepository(
                 referenceId = installment.id,
                 amount = paidAmount,
                 date = paidDate,
-                description = "پرداخت قسط وام: ${loan.title}"
+                description = "پرداخت قسط وام: ${loan.title}",
+                bankAccountId = bankAccountId
             )
         )
     }
@@ -110,15 +112,16 @@ class DebtRepository(
         checkDao.delete(check)
     }
 
-    suspend fun collectCheck(check: CheckEntity, date: Long) {
-        checkDao.update(check.copy(status = CheckStatus.COLLECTED.name))
+    suspend fun collectCheck(check: CheckEntity, date: Long, bankAccountId: Long? = null) {
+        checkDao.update(check.copy(status = CheckStatus.COLLECTED.name, bankAccountId = bankAccountId))
         historyDao.insert(
             PaymentHistory(
                 type = PaymentType.CHECK.name,
                 referenceId = check.id,
                 amount = check.amount,
                 date = date,
-                description = "وصول چک: ${check.payee}"
+                description = "وصول چک: ${check.payee}",
+                bankAccountId = bankAccountId
             )
         )
     }
@@ -138,16 +141,17 @@ class DebtRepository(
         debtDao.delete(debt)
     }
 
-    suspend fun payDebt(debt: Debt, amount: Long, date: Long) {
+    suspend fun payDebt(debt: Debt, amount: Long, date: Long, bankAccountId: Long? = null) {
         val newPaid = (debt.paidAmount + amount).coerceAtMost(debt.totalAmount)
         debtDao.update(debt.copy(paidAmount = newPaid))
         historyDao.insert(
             PaymentHistory(
-                type = PaymentType.DEBT.name,
+                type = if (debt.isCredit) PaymentType.CREDIT.name else PaymentType.DEBT.name,
                 referenceId = debt.id,
                 amount = amount,
                 date = date,
-                description = "پرداخت بدهی: ${debt.creditorName}"
+                description = (if (debt.isCredit) "دریافت بستانکاری: " else "پرداخت بدهی: ") + debt.creditorName,
+                bankAccountId = bankAccountId
             )
         )
     }
@@ -165,11 +169,11 @@ class DebtRepository(
         recurringDao.delete(payment)
     }
 
-    suspend fun markRecurringPaid(payment: RecurringPayment, paidDate: Long) {
+    suspend fun markRecurringPaid(payment: RecurringPayment, paidDate: Long, bankAccountId: Long? = null) {
         val freq = PaymentFrequency.entries.find { it.name == payment.frequency } ?: PaymentFrequency.MONTHLY
         val nextDue = PersianDateUtil.addMonths(payment.nextDueDate, freq.months)
         recurringDao.update(
-            payment.copy(lastPaidDate = paidDate, nextDueDate = nextDue)
+            payment.copy(lastPaidDate = paidDate, nextDueDate = nextDue, bankAccountId = bankAccountId)
         )
         historyDao.insert(
             PaymentHistory(
@@ -177,7 +181,8 @@ class DebtRepository(
                 referenceId = payment.id,
                 amount = payment.amount,
                 date = paidDate,
-                description = "پرداخت قسط دوره‌ای: ${payment.title}"
+                description = "پرداخت دوره‌ای: ${payment.title}",
+                bankAccountId = bankAccountId
             )
         )
     }

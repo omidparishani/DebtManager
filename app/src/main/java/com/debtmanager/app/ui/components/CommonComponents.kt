@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package com.debtmanager.app.ui.components
 
 import androidx.compose.foundation.BorderStroke
@@ -27,6 +29,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.debtmanager.app.data.entity.InstallmentStatus
 import com.debtmanager.app.ui.theme.statusColor
+import com.debtmanager.app.data.entity.BankAccount
 import com.debtmanager.app.util.CurrencyUtil
 import com.debtmanager.app.util.ItemIconOption
 import com.debtmanager.app.util.ItemIcons
@@ -95,16 +98,26 @@ fun AmountTextField(
     label: String,
     modifier: Modifier = Modifier
 ) {
+    // Keep internal value as pure Latin digits only; display with separators via VisualTransformation
+    val displayValue = value.filter { it.isDigit() }
     OutlinedTextField(
-        value = value,
-        onValueChange = { onValueChange(CurrencyUtil.formatInputOnChange(it)) },
+        value = displayValue,
+        onValueChange = { new ->
+            // Accept only digits (Latin or Persian) and convert to Latin digits
+            val digits = new.filter { it.isDigit() || it in '۰'..'۹' }
+                .map { if (it in '۰'..'۹') '0' + (it - '۰') else it }
+                .joinToString("")
+            onValueChange(digits)
+        },
         label = { Text(label) },
         modifier = modifier.fillMaxWidth(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         singleLine = true,
-        placeholder = { Text("۰") }
+        placeholder = { Text("۰") },
+        visualTransformation = CurrencyUtil.AmountVisualTransformation()
     )
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -371,4 +384,50 @@ fun ConfirmDialog(
             TextButton(onClick = onDismiss) { Text("خیر") }
         }
     )
+}
+
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AccountPickerField(
+    accounts: List<BankAccount>,
+    selectedAccountId: Long?,
+    onAccountSelected: (Long?) -> Unit,
+    label: String = "پرداخت از حساب"
+) {
+    var expanded by remember { mutableStateOf(false) }
+    if (accounts.isEmpty()) {
+        Text(
+            "حساب بانکی تعریف نشده. از بخش حساب‌ها اضافه کنید.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error
+        )
+        return
+    }
+    ExposedDropdownMenuBox(expanded, { expanded = it }) {
+        val accName = accounts.find { it.id == selectedAccountId }?.let {
+            "${it.name} (${CurrencyUtil.formatWithoutUnit(it.balance)})"
+        } ?: "انتخاب حساب (اختیاری)"
+        OutlinedTextField(
+            value = accName,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            modifier = Modifier.menuAnchor().fillMaxWidth(),
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) }
+        )
+        ExposedDropdownMenu(expanded, { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text("بدون حساب") },
+                onClick = { onAccountSelected(null); expanded = false }
+            )
+            accounts.forEach { acc ->
+                DropdownMenuItem(
+                    text = { Text("${acc.name} — ${CurrencyUtil.format(acc.balance)}") },
+                    onClick = { onAccountSelected(acc.id); expanded = false }
+                )
+            }
+        }
+    }
 }

@@ -25,9 +25,11 @@ import com.debtmanager.app.viewmodel.MainViewModel
 @Composable
 fun RecurringScreen(viewModel: MainViewModel) {
     val payments by viewModel.recurring.collectAsState()
+    val accounts by viewModel.bankAccounts.collectAsState(initial = emptyList())
     var showAdd by remember { mutableStateOf(false) }
     var editTarget by remember { mutableStateOf<RecurringPayment?>(null) }
     var deleteTarget by remember { mutableStateOf<RecurringPayment?>(null) }
+    var payTarget by remember { mutableStateOf<RecurringPayment?>(null) }
 
     Scaffold(
         floatingActionButton = {
@@ -44,7 +46,7 @@ fun RecurringScreen(viewModel: MainViewModel) {
                 items(payments, key = { it.id }) { payment ->
                     RecurringCard(
                         payment = payment,
-                        onMarkPaid = { viewModel.markRecurringPaid(payment, System.currentTimeMillis()) {} },
+                        onMarkPaid = { payTarget = payment },
                         onEdit = { editTarget = payment },
                         onDelete = { deleteTarget = payment }
                     )
@@ -65,6 +67,30 @@ fun RecurringScreen(viewModel: MainViewModel) {
         ConfirmDialog("حذف", "آیا مطمئن هستید؟",
             onConfirm = { viewModel.deleteRecurring(payment) { deleteTarget = null } },
             onDismiss = { deleteTarget = null })
+    }
+    payTarget?.let { payment ->
+        var date by remember { mutableLongStateOf(System.currentTimeMillis()) }
+        var selectedAccountId by remember {
+            mutableStateOf(accounts.find { it.isDefault }?.id ?: accounts.firstOrNull()?.id)
+        }
+        AlertDialog(
+            onDismissRequest = { payTarget = null },
+            title = { Text("ثبت پرداخت دوره‌ای") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(payment.title, style = MaterialTheme.typography.titleMedium)
+                    Text("مبلغ: ${CurrencyUtil.format(payment.amount)}")
+                    JalaliDatePickerField(date, { date = it }, "تاریخ پرداخت")
+                    AccountPickerField(accounts, selectedAccountId, { selectedAccountId = it }, "پرداخت از حساب")
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.markRecurringPaid(payment, date, selectedAccountId) { payTarget = null }
+                }) { Text("ثبت") }
+            },
+            dismissButton = { TextButton(onClick = { payTarget = null }) { Text("انصراف") } }
+        )
     }
 }
 

@@ -27,6 +27,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val backupManager = BackupManager(application, db)
 
     val darkMode = settings.darkMode.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val themeColor = settings.themeColor.stateIn(viewModelScope, SharingStarted.Eagerly, "teal")
     val reminderDays = settings.reminderDays.stateIn(viewModelScope, SharingStarted.Eagerly, 3)
     val reminderHour = settings.reminderHour.stateIn(viewModelScope, SharingStarted.Eagerly, 9)
     val notificationSound = settings.notificationSound.stateIn(viewModelScope, SharingStarted.Eagerly, "default")
@@ -45,10 +46,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val checks = repository.getAllChecks().stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
     val debts = repository.getAllDebts().stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
     val recurring = repository.getAllRecurring().stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    
     val paymentHistory = repository.getPaymentHistory().stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    // New: Contacts & Bank Accounts
+    val contacts = db.contactDao().getAll().stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val bankAccounts = db.bankAccountDao().getAll().stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val accountTransactions = db.accountTransactionDao().getAll().stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
 
     private val _dashboardState = MutableStateFlow(DashboardUiState())
     val dashboardState: StateFlow<DashboardUiState> = _dashboardState.asStateFlow()
+
+    private val _selectedMonthMillis = MutableStateFlow(System.currentTimeMillis())
+    val selectedMonthMillis: StateFlow<Long> = _selectedMonthMillis.asStateFlow()
+
+    fun setSelectedMonth(millis: Long) {
+        _selectedMonthMillis.value = millis
+        // trigger rebuild by touching now
+        viewModelScope.launch {
+            // rebuild will pick up new month via selectedMonthMillis
+        }
+    }
+
+    fun shiftSelectedMonth(deltaMonths: Int) {
+        _selectedMonthMillis.value = PersianDateUtil.addMonths(_selectedMonthMillis.value, deltaMonths)
+        lastDashboardInputs?.let { _dashboardState.value = buildDashboard(it) }
+    }
+
+    @Volatile
+    private var lastDashboardInputs: DashboardInputs? = null
 
     init {
         viewModelScope.launch {
@@ -78,7 +105,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     checkList = second[2] as List<CheckEntity>,
                     recurringList = second[3] as List<RecurringPayment>
                 )
-            }.collect { inputs -> _dashboardState.value = buildDashboard(inputs) }
+            }.collect { inputs ->
+                lastDashboardInputs = inputs
+                _dashboardState.value = buildDashboard(inputs)
+            }
         }
     }
 
@@ -94,8 +124,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val recurringList = inputs.recurringList
 
         val currentTime = System.currentTimeMillis()
-        val monthStart = PersianDateUtil.startOfMonth(currentTime)
-        val monthEnd = PersianDateUtil.endOfMonth(currentTime)
+        val selected = _selectedMonthMillis.value
+        val monthStart = PersianDateUtil.startOfMonth(selected)
+        val monthEnd = PersianDateUtil.endOfMonth(selected)
         val upcomingEnd = PersianDateUtil.addDays(currentTime, 30)
 
         val monthUnpaidInstallments = unpaidInstallments.filter { it.dueDate in monthStart..monthEnd }
@@ -241,8 +272,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         onDone()
     }
 
-    fun payInstallment(installment: LoanInstallment, amount: Long, date: Long, onDone: () -> Unit) = viewModelScope.launch {
-        repository.payInstallment(installment, amount, date)
+    fun payInstallment(installment: LoanInstallment, amount: Long, date: Long, bankAccountId: Long? = null, onDone: () -> Unit) = viewModelScope.launch {
+        repository.payInstallment(installment, amount, date, bankAccountId)
+        val loan = repository.getLoan(installment.loanId)
+        applyPaymentToAccount(
+            bankAccountId, amount, date,
+            "پرداخت قسط وام: ${loan?.title ?: ""}",
+            "LOAN", installment.id
+        )
         onDone()
     }
 
@@ -277,8 +314,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         onDone()
     }
 
-    fun collectCheck(check: CheckEntity, date: Long, onDone: () -> Unit) = viewModelScope.launch {
-        repository.collectCheck(check, date)
+    fun collectCheck(check: CheckEntity, date: Long, bankAccountId: Long? = null, onDone: () -> Unit) = viewModelScope.launch {
+        repository.collectCheck(check, date, bankAccountId)
+        applyPaymentToAccount(
+            bankAccountId, check.amount, date,
+            "وصول چک: ${check.payee}",
+            "CHECK", check.id
+        )
         onDone()
     }
 
@@ -294,8 +336,40 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         onDone()
     }
 
-    fun payDebt(debt: Debt, amount: Long, date: Long, onDone: () -> Unit) = viewModelScope.launch {
-        repository.payDebt(debt, amount, date)
+    fun payDebt(debt: Debt, amount: Long, date: Long, bankAccountId: Long? = null, onDone: () -> Unit) = viewModelScope.launch {
+        repository.payDebt(debt, amount, date, bankAccountId)
+        // کسر/افزایش موجودی حساب بانکی
+        if (bankAccountId != null && amount > 0) {
+            if (debt.isCredit) {
+                // بستانکاری: پول به حساب ما واریز می‌شود
+                db.bankAccountDao().adjustBalance(bankAccountId, amount)
+                db.accountTransactionDao().insert(
+                    AccountTransaction(
+                        accountId = bankAccountId,
+                        type = "DEPOSIT",
+                        amount = amount,
+                        date = date,
+                        description = "دریافت بستانکاری: ${debt.creditorName}",
+                        relatedType = "CREDIT",
+                        relatedId = debt.id
+                    )
+                )
+            } else {
+                // بدهکاری: از حساب ما برداشت می‌شود
+                db.bankAccountDao().adjustBalance(bankAccountId, -amount)
+                db.accountTransactionDao().insert(
+                    AccountTransaction(
+                        accountId = bankAccountId,
+                        type = "WITHDRAW",
+                        amount = amount,
+                        date = date,
+                        description = "پرداخت بدهی: ${debt.creditorName}",
+                        relatedType = "DEBT",
+                        relatedId = debt.id
+                    )
+                )
+            }
+        }
         onDone()
     }
 
@@ -325,12 +399,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         onDone()
     }
 
-    fun markRecurringPaid(payment: RecurringPayment, date: Long, onDone: () -> Unit) = viewModelScope.launch {
-        repository.markRecurringPaid(payment, date)
-        val updated = repository.getRecurring(payment.id)
-        updated?.let {
-            ReminderScheduler.scheduleForRecurring(getApplication(), it.id, it.title, it.amount, it.nextDueDate, reminderDays.value)
-        }
+    fun markRecurringPaid(payment: RecurringPayment, date: Long, bankAccountId: Long? = null, onDone: () -> Unit) = viewModelScope.launch {
+        repository.markRecurringPaid(payment, date, bankAccountId)
+        applyPaymentToAccount(
+            bankAccountId, payment.amount, date,
+            "پرداخت دوره‌ای: ${payment.title}",
+            "RECURRING", payment.id
+        )
         onDone()
     }
 
@@ -341,6 +416,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // Settings
+    fun setThemeColor(color: String) = viewModelScope.launch { settings.setThemeColor(color) }
     fun setDarkMode(enabled: Boolean) = viewModelScope.launch { settings.setDarkMode(enabled) }
     fun setReminderDays(days: Int) = viewModelScope.launch {
         settings.setReminderDays(days)
@@ -383,7 +459,89 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun getInstallments(loanId: Long) = repository.getInstallments(loanId)
+
+    // ========== Contacts ==========
+    fun addContact(contact: Contact, onDone: () -> Unit = {}) = viewModelScope.launch {
+        db.contactDao().insert(contact)
+        onDone()
+    }
+    fun updateContact(contact: Contact, onDone: () -> Unit = {}) = viewModelScope.launch {
+        db.contactDao().update(contact)
+        onDone()
+    }
+    fun deleteContact(contact: Contact, onDone: () -> Unit = {}) = viewModelScope.launch {
+        db.contactDao().delete(contact)
+        onDone()
+    }
+
+    // ========== Bank Accounts ==========
+    fun addBankAccount(account: BankAccount, onDone: () -> Unit = {}) = viewModelScope.launch {
+        val id = db.bankAccountDao().insert(account)
+        if (account.balance != 0L) {
+            db.accountTransactionDao().insert(
+                AccountTransaction(
+                    accountId = id,
+                    type = "DEPOSIT",
+                    amount = account.balance,
+                    date = System.currentTimeMillis(),
+                    description = "موجودی اولیه"
+                )
+            )
+        }
+        onDone()
+    }
+
+    fun deposit(accountId: Long, amount: Long, date: Long, description: String, onDone: () -> Unit = {}) = viewModelScope.launch {
+        db.bankAccountDao().adjustBalance(accountId, amount)
+        db.accountTransactionDao().insert(
+            AccountTransaction(accountId = accountId, type = "DEPOSIT", amount = amount, date = date, description = description)
+        )
+        onDone()
+    }
+
+    fun withdraw(accountId: Long, amount: Long, date: Long, description: String, onDone: () -> Unit = {}) = viewModelScope.launch {
+        db.bankAccountDao().adjustBalance(accountId, -amount)
+        db.accountTransactionDao().insert(
+            AccountTransaction(accountId = accountId, type = "WITHDRAW", amount = amount, date = date, description = description)
+        )
+        onDone()
+    }
+
+    private suspend fun applyPaymentToAccount(
+        accountId: Long?,
+        amount: Long,
+        date: Long,
+        description: String,
+        relatedType: String,
+        relatedId: Long,
+        isDeposit: Boolean = false
+    ) {
+        if (accountId == null || amount <= 0) return
+        if (isDeposit) {
+            db.bankAccountDao().adjustBalance(accountId, amount)
+            db.accountTransactionDao().insert(
+                AccountTransaction(
+                    accountId = accountId, type = "DEPOSIT", amount = amount, date = date,
+                    description = description, relatedType = relatedType, relatedId = relatedId
+                )
+            )
+        } else {
+            db.bankAccountDao().adjustBalance(accountId, -amount)
+            db.accountTransactionDao().insert(
+                AccountTransaction(
+                    accountId = accountId, type = "WITHDRAW", amount = amount, date = date,
+                    description = description, relatedType = relatedType, relatedId = relatedId
+                )
+            )
+        }
+    }
+
+    fun deleteBankAccount(account: BankAccount, onDone: () -> Unit = {}) = viewModelScope.launch {
+        db.bankAccountDao().delete(account)
+        onDone()
+    }
 }
+
 
 private data class DashboardInputs(
     val unpaidInstallments: List<LoanInstallment>,

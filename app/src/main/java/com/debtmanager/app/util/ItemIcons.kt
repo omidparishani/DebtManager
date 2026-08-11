@@ -24,6 +24,10 @@ object ItemIcons {
         ItemIconOption("shopping", "خرید", Icons.Filled.ShoppingCart),
         ItemIconOption("restaurant", "رستوران", Icons.Filled.Restaurant),
         ItemIconOption("build", "تعمیرات", Icons.Filled.Build),
+        ItemIconOption("payments", "پرداخت", Icons.Filled.Payments),
+        ItemIconOption("account_balance_wallet", "کیف پول", Icons.Filled.AccountBalanceWallet),
+        ItemIconOption("trending_up", "رشد", Icons.Filled.TrendingUp),
+        ItemIconOption("handshake", "توافق", Icons.Filled.Handshake),
         ItemIconOption("money", "پول", Icons.Filled.AttachMoney),
         ItemIconOption("savings", "پس‌انداز", Icons.Filled.Savings),
         ItemIconOption("other", "سایر", Icons.Filled.MoreHoriz)

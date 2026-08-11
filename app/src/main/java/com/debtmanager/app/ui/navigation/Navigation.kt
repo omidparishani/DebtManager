@@ -9,7 +9,9 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     data object Dashboard : Screen("dashboard", "داشبورد", Icons.Filled.SpaceDashboard)
     data object Loans : Screen("loans", "وام‌ها", Icons.Filled.AccountBalance)
     data object Checks : Screen("checks", "چک‌ها", Icons.Filled.Payments)
-    data object Debts : Screen("debts", "بدهکاری‌ها", Icons.Filled.Groups)
+    data object Debts : Screen("debts", "بدهی و طلب", Icons.Filled.Groups)
+    data object Contacts : Screen("contacts", "اشخاص", Icons.Filled.Person)
+    data object Accounts : Screen("accounts", "حساب‌ها", Icons.Filled.AccountBalanceWallet)
     data object Recurring : Screen("recurring", "اقساط دوره‌ای", Icons.Filled.EventRepeat)
     data object History : Screen("history", "تاریخچه", Icons.Filled.History)
     data object Settings : Screen("settings", "تنظیمات", Icons.Filled.Settings)
@@ -28,6 +30,9 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
         fun createRoute(debtId: Long) = "edit_debt/$debtId"
     }
     data object AddRecurring : Screen("add_recurring", "افزودن قسط دوره‌ای", Icons.Filled.Add)
+    data object ContactDetail : Screen("contact/{contactId}", "حساب شخص", Icons.Filled.Person) {
+        fun createRoute(contactId: Long) = "contact/$contactId"
+    }
     data object Lock : Screen("lock", "قفل اپ", Icons.Filled.Lock)
 }
 
@@ -41,9 +46,9 @@ data class BottomNavItem(
 val bottomNavItems = listOf(
     BottomNavItem(Screen.Dashboard, Icons.Filled.SpaceDashboard, Icons.Outlined.SpaceDashboard, "داشبورد"),
     BottomNavItem(Screen.Loans, Icons.Filled.AccountBalance, Icons.Outlined.AccountBalance, "وام‌ها"),
-    BottomNavItem(Screen.Checks, Icons.Filled.Payments, Icons.Outlined.Payments, "چک‌ها"),
-    BottomNavItem(Screen.Debts, Icons.Filled.Groups, Icons.Outlined.Groups, "بدهکاری"),
-    BottomNavItem(Screen.Recurring, Icons.Filled.EventRepeat, Icons.Outlined.EventRepeat, "دوره‌ای")
+    BottomNavItem(Screen.Debts, Icons.Filled.Groups, Icons.Outlined.Groups, "بدهی/طلب"),
+    BottomNavItem(Screen.Accounts, Icons.Filled.AccountBalanceWallet, Icons.Outlined.AccountBalanceWallet, "حساب‌ها"),
+    BottomNavItem(Screen.Contacts, Icons.Filled.Person, Icons.Outlined.Person, "اشخاص")
 )
 
 val bottomNavRoutes = bottomNavItems.map { it.screen.route }

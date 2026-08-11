@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.debtmanager.app.data.entity.CheckEntity
 import com.debtmanager.app.data.entity.CheckStatus
@@ -25,6 +26,7 @@ import com.debtmanager.app.viewmodel.MainViewModel
 @Composable
 fun ChecksScreen(viewModel: MainViewModel) {
     val checks by viewModel.checks.collectAsState()
+    val accounts by viewModel.bankAccounts.collectAsState(initial = emptyList())
     var showAdd by remember { mutableStateOf(false) }
     var editTarget by remember { mutableStateOf<CheckEntity?>(null) }
     var deleteTarget by remember { mutableStateOf<CheckEntity?>(null) }
@@ -69,12 +71,23 @@ fun ChecksScreen(viewModel: MainViewModel) {
     }
     collectTarget?.let { check ->
         var date by remember { mutableLongStateOf(System.currentTimeMillis()) }
+        var selectedAccountId by remember {
+            mutableStateOf(accounts.find { it.isDefault }?.id ?: accounts.firstOrNull()?.id)
+        }
         AlertDialog(
             onDismissRequest = { collectTarget = null },
-            title = { Text("ثبت وصول چک") },
-            text = { JalaliDatePickerField(date, { date = it }, "تاریخ وصول") },
+            title = { Text("وصول چک") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("مبلغ: ${com.debtmanager.app.util.CurrencyUtil.format(check.amount)}")
+                    JalaliDatePickerField(date, { date = it }, "تاریخ وصول")
+                    AccountPickerField(accounts, selectedAccountId, { selectedAccountId = it }, "برداشت از حساب")
+                }
+            },
             confirmButton = {
-                TextButton(onClick = { viewModel.collectCheck(check, date) { collectTarget = null } }) { Text("ثبت") }
+                TextButton(onClick = {
+                    viewModel.collectCheck(check, date, selectedAccountId) { collectTarget = null }
+                }) { Text("ثبت") }
             },
             dismissButton = { TextButton(onClick = { collectTarget = null }) { Text("انصراف") } }
         )

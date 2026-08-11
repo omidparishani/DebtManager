@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="@android:color/white">
+
+    <TextView
+        android:id="@+id/widget_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="حسابداری شخصی"
+        android:textStyle="bold"
+        android:textSize="14sp"
+        android:textColor="#0D7377" />
+
+    <TextView
+        android:id="@+id/widget_balance"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="موجودی: —"
+        android:textSize="13sp"
+        android:textColor="#333333" />
+
+    <TextView
+        android:id="@+id/widget_debt"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="مانده بدهی: —"
+        android:textSize="13sp"
+        android:textColor="#C62828" />
+
+    <TextView
+        android:id="@+id/widget_today"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="سررسید امروز: —"
+        android:textSize="12sp"
+        android:textColor="#555555" />
+</LinearLayout>
