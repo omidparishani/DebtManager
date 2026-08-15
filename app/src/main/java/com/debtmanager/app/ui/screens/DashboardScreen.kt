@@ -176,7 +176,29 @@ item {
             }
 
             item {
-                Text("آمار کلی", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                item {
+                Text("دسترسی سریع", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(8.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AssistChip(
+                        onClick = { navController.navigate(Screen.Loans.route) },
+                        label = { Text("وام‌ها") },
+                        leadingIcon = { Icon(Icons.Default.AccountBalance, null, Modifier.size(18.dp)) }
+                    )
+                    AssistChip(
+                        onClick = { navController.navigate(Screen.Recurring.route) },
+                        label = { Text("اقساط دوره‌ای") },
+                        leadingIcon = { Icon(Icons.Default.EventRepeat, null, Modifier.size(18.dp)) }
+                    )
+                    AssistChip(
+                        onClick = { navController.navigate(Screen.History.route) },
+                        label = { Text("تاریخچه") },
+                        leadingIcon = { Icon(Icons.Default.History, null, Modifier.size(18.dp)) }
+                    )
+                }
+            }
+
+            Text("آمار کلی", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
                 ElevatedCard {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

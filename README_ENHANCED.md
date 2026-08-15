@@ -68,3 +68,23 @@ ui/navigation/Navigation.kt → آیتم‌های جدید
 ```
 
 موفق باشید!
+
+## ساخت APK با GitHub Actions
+
+فایل `.github/workflows/android-build.yml` اضافه شده است.
+
+1. پروژه را روی GitHub push کنید (شاخه `main` یا `master`).
+2. در تب **Actions** ورک‌فلو **Build Android APK** اجرا می‌شود.
+3. پس از اتمام، از **Artifacts** فایل `app-debug` یا `app-release-unsigned` را دانلود کنید.
+4. اجرای دستی: Actions → Build Android APK → Run workflow.
+
+برای امضای release می‌توانید Secretهای `KEYSTORE_BASE64` و `KEYSTORE_PASSWORD` را اضافه و مرحله sign را گسترش دهید.
+
+**نکته:** اگر `gradlew` در ریپو نیست، ورک‌فلو خودش `gradle wrapper` می‌سازد. بهتر است `gradlew` و `gradle/wrapper/gradle-wrapper.jar` را هم commit کنید.
+
+## پشتیبان‌گیری خودکار
+
+- تنظیمات → پشتیبان‌گیری → فعال‌سازی پشتیبان خودکار
+- فاصله: ۱۲ ساعت / روزانه / ۲ روز / هفتگی
+- مسیر ذخیره: `Android/data/com.debtmanager.app/files/Documents/DebtManagerBackups`
+- حداکثر ۱۰ فایل آخر نگه داشته می‌شود

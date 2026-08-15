@@ -244,3 +244,31 @@ interface AccountTransactionDao {
     @Query("DELETE FROM account_transactions")
     suspend fun deleteAll()
 }
+
+
+@Dao
+interface ExpenseDao {
+    @Query("SELECT * FROM expenses ORDER BY date DESC")
+    fun getAll(): Flow<List<Expense>>
+
+    @Query("SELECT * FROM expenses WHERE date >= :start AND date <= :end ORDER BY date DESC")
+    fun getInRange(start: Long, end: Long): Flow<List<Expense>>
+
+    @Query("SELECT * FROM expenses WHERE member = :member ORDER BY date DESC")
+    fun getByMember(member: String): Flow<List<Expense>>
+
+    @Query("SELECT * FROM expenses WHERE id = :id")
+    suspend fun getById(id: Long): Expense?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(expense: Expense): Long
+
+    @Update
+    suspend fun update(expense: Expense)
+
+    @Delete
+    suspend fun delete(expense: Expense)
+
+    @Query("DELETE FROM expenses")
+    suspend fun deleteAll()
+}

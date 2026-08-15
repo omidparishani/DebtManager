@@ -19,6 +19,8 @@ class SettingsRepository(private val context: Context) {
         val REMIND_ON_DUE_DAY = booleanPreferencesKey("remind_on_due_day")
         val DARK_MODE = booleanPreferencesKey("dark_mode")
         private val THEME_COLOR = stringPreferencesKey("theme_color")
+        val AUTO_BACKUP_ENABLED = booleanPreferencesKey("auto_backup_enabled")
+        val AUTO_BACKUP_INTERVAL_HOURS = intPreferencesKey("auto_backup_interval_hours")
         val PIN_ENABLED = booleanPreferencesKey("pin_enabled")
         val PIN_HASH = stringPreferencesKey("pin_hash")
         val BIOMETRIC_ENABLED = booleanPreferencesKey("biometric_enabled")
@@ -35,6 +37,8 @@ class SettingsRepository(private val context: Context) {
     val remindOnDueDay: Flow<Boolean> = context.dataStore.data.map { it[REMIND_ON_DUE_DAY] ?: true }
     val darkMode: Flow<Boolean> = context.dataStore.data.map { it[DARK_MODE] ?: false }
     val themeColor: Flow<String> = context.dataStore.data.map { it[THEME_COLOR] ?: "teal" }
+    val autoBackupEnabled: Flow<Boolean> = context.dataStore.data.map { it[AUTO_BACKUP_ENABLED] ?: false }
+    val autoBackupIntervalHours: Flow<Int> = context.dataStore.data.map { it[AUTO_BACKUP_INTERVAL_HOURS] ?: 24 }
     val pinEnabled: Flow<Boolean> = context.dataStore.data.map { it[PIN_ENABLED] ?: false }
     val pinHash: Flow<String?> = context.dataStore.data.map { it[PIN_HASH] }
     val biometricEnabled: Flow<Boolean> = context.dataStore.data.map { it[BIOMETRIC_ENABLED] ?: false }
@@ -47,6 +51,9 @@ class SettingsRepository(private val context: Context) {
     suspend fun setNotificationSound(soundId: String) = edit { it[NOTIFICATION_SOUND] = soundId }
     suspend fun setVibrationEnabled(enabled: Boolean) = edit { it[VIBRATION_ENABLED] = enabled }
     suspend fun setRemindOnDueDay(enabled: Boolean) = edit { it[REMIND_ON_DUE_DAY] = enabled }
+    suspend fun setAutoBackupEnabled(enabled: Boolean) = edit { it[AUTO_BACKUP_ENABLED] = enabled }
+    suspend fun setAutoBackupIntervalHours(hours: Int) = edit { it[AUTO_BACKUP_INTERVAL_HOURS] = hours }
+
     suspend fun setThemeColor(color: String) {
         context.dataStore.edit { it[THEME_COLOR] = color }
     }

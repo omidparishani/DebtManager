@@ -28,6 +28,11 @@ object ItemIcons {
         ItemIconOption("account_balance_wallet", "کیف پول", Icons.Filled.AccountBalanceWallet),
         ItemIconOption("trending_up", "رشد", Icons.Filled.TrendingUp),
         ItemIconOption("handshake", "توافق", Icons.Filled.Handshake),
+        ItemIconOption("directions_car", "ماشین", Icons.Filled.DirectionsCar),
+        ItemIconOption("local_hospital", "بیمارستان", Icons.Filled.LocalHospital),
+        ItemIconOption("checkroom", "پوشاک", Icons.Filled.Checkroom),
+        ItemIconOption("sports_esports", "بازی", Icons.Filled.SportsEsports),
+        ItemIconOption("shopping_cart", "سبد خرید", Icons.Filled.ShoppingCart),
         ItemIconOption("money", "پول", Icons.Filled.AttachMoney),
         ItemIconOption("savings", "پس‌انداز", Icons.Filled.Savings),
         ItemIconOption("other", "سایر", Icons.Filled.MoreHoriz)

@@ -146,7 +146,7 @@ fun CheckFormDialog(existing: CheckEntity?, onDismiss: () -> Unit, onSave: (Chec
                 item { JalaliDatePickerField(dueDate, { dueDate = it }, "تاریخ سررسید *") }
                 item { OutlinedTextField(bankName, { bankName = it }, label = { Text("نام بانک") }, modifier = Modifier.fillMaxWidth()) }
                 item { OutlinedTextField(checkNumber, { checkNumber = it }, label = { Text("شماره چک") }, modifier = Modifier.fillMaxWidth()) }
-                item { OutlinedTextField(payee, { payee = it }, label = { Text("گیرنده *") }, modifier = Modifier.fillMaxWidth()) }
+                item { OutlinedTextField(payee, { payee = it }, label = { Text("به چه کسی داده شد؟ (گیرنده) *") }, modifier = Modifier.fillMaxWidth()) }
                 item { OutlinedTextField(description, { description = it }, label = { Text("توضیحات") }, modifier = Modifier.fillMaxWidth()) }
                 item { OutlinedTextField(extraInfo, { extraInfo = it }, label = { Text("اطلاعات تکمیلی") }, modifier = Modifier.fillMaxWidth()) }
                 item { IconPicker(selectedIcon = icon, onIconSelected = { icon = it }, label = "آیکون") }

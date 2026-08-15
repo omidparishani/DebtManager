@@ -28,6 +28,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val darkMode = settings.darkMode.stateIn(viewModelScope, SharingStarted.Eagerly, false)
     val themeColor = settings.themeColor.stateIn(viewModelScope, SharingStarted.Eagerly, "teal")
+    val autoBackupEnabled = settings.autoBackupEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val autoBackupIntervalHours = settings.autoBackupIntervalHours.stateIn(viewModelScope, SharingStarted.Eagerly, 24)
     val reminderDays = settings.reminderDays.stateIn(viewModelScope, SharingStarted.Eagerly, 3)
     val reminderHour = settings.reminderHour.stateIn(viewModelScope, SharingStarted.Eagerly, 9)
     val notificationSound = settings.notificationSound.stateIn(viewModelScope, SharingStarted.Eagerly, "default")
@@ -53,6 +55,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val contacts = db.contactDao().getAll().stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
     val bankAccounts = db.bankAccountDao().getAll().stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
     val accountTransactions = db.accountTransactionDao().getAll().stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val expenses = db.expenseDao().getAll().stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
 
     private val _dashboardState = MutableStateFlow(DashboardUiState())
@@ -417,6 +420,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // Settings
     fun setThemeColor(color: String) = viewModelScope.launch { settings.setThemeColor(color) }
+    fun setAutoBackupEnabled(enabled: Boolean) = viewModelScope.launch {
+        settings.setAutoBackupEnabled(enabled)
+        com.debtmanager.app.worker.BackupWorker.scheduleFromSettings(
+            getApplication(), enabled, autoBackupIntervalHours.value.toLong()
+        )
+    }
+    fun setAutoBackupIntervalHours(hours: Int) = viewModelScope.launch {
+        settings.setAutoBackupIntervalHours(hours)
+        if (autoBackupEnabled.value) {
+            com.debtmanager.app.worker.BackupWorker.scheduleFromSettings(
+                getApplication(), true, hours.toLong()
+            )
+        }
+    }
     fun setDarkMode(enabled: Boolean) = viewModelScope.launch { settings.setDarkMode(enabled) }
     fun setReminderDays(days: Int) = viewModelScope.launch {
         settings.setReminderDays(days)
@@ -534,6 +551,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 )
             )
         }
+    }
+
+    
+    fun addExpense(expense: Expense, onDone: () -> Unit = {}) = viewModelScope.launch {
+        val id = db.expenseDao().insert(expense)
+        if (expense.accountId != null && expense.amount > 0) {
+            applyPaymentToAccount(
+                expense.accountId, expense.amount, expense.date,
+                "مخارج: ${expense.title}", "EXPENSE", id
+            )
+        }
+        onDone()
+    }
+    fun updateExpense(expense: Expense, onDone: () -> Unit = {}) = viewModelScope.launch {
+        db.expenseDao().update(expense)
+        onDone()
+    }
+    fun deleteExpense(expense: Expense, onDone: () -> Unit = {}) = viewModelScope.launch {
+        db.expenseDao().delete(expense)
+        onDone()
     }
 
     fun deleteBankAccount(account: BankAccount, onDone: () -> Unit = {}) = viewModelScope.launch {

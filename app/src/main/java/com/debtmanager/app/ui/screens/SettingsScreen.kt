@@ -3,7 +3,6 @@ package com.debtmanager.app.ui.screens
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -29,6 +28,8 @@ fun SettingsScreen(viewModel: MainViewModel, navController: NavController) {
     val context = LocalContext.current
     val darkMode by viewModel.darkMode.collectAsState()
     val themeColor by viewModel.themeColor.collectAsState()
+    val autoBackupEnabled by viewModel.autoBackupEnabled.collectAsState()
+    val autoBackupIntervalHours by viewModel.autoBackupIntervalHours.collectAsState()
     val reminderDays by viewModel.reminderDays.collectAsState()
     val reminderHour by viewModel.reminderHour.collectAsState()
     val notificationSound by viewModel.notificationSound.collectAsState()
@@ -181,6 +182,32 @@ fun SettingsScreen(viewModel: MainViewModel, navController: NavController) {
             }
 
             SettingsSection("پشتیبان‌گیری") {
+                SettingsSwitchRow("پشتیبان‌گیری خودکار", autoBackupEnabled) {
+                    viewModel.setAutoBackupEnabled(it)
+                }
+                if (autoBackupEnabled) {
+                    Text("فاصله پشتیبان‌گیری:", style = MaterialTheme.typography.bodyMedium)
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(12 to "۱۲ ساعت", 24 to "روزانه", 48 to "۲ روز", 168 to "هفتگی").forEach { (h, label) ->
+                            FilterChip(
+                                selected = autoBackupIntervalHours == h,
+                                onClick = { viewModel.setAutoBackupIntervalHours(h) },
+                                label = { Text(label) }
+                            )
+                        }
+                    }
+                    Text(
+                        "فایل‌ها در Documents/DebtManagerBackups ذخیره می‌شوند.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+
                 Button(
                     onClick = {
                         viewModel.exportBackup { file ->

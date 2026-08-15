@@ -182,3 +182,39 @@ data class AccountTransaction(
     val relatedId: Long? = null,
     val toAccountId: Long? = null     // for transfers
 )
+
+
+// ========== مخارج روزمره ==========
+@Entity(tableName = "expenses")
+data class Expense(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val title: String,
+    val amount: Long,
+    val date: Long,
+    val category: String = ExpenseCategory.OTHER.name,
+    /** SELF, SPOUSE, CHILD, FAMILY, SHARED */
+    val member: String = ExpenseMember.SELF.name,
+    val accountId: Long? = null,
+    val notes: String = "",
+    val icon: String = "shopping_cart"
+)
+
+enum class ExpenseCategory(val label: String) {
+    FOOD("خوراک"),
+    TRANSPORT("حمل‌ونقل"),
+    HOME("خانه و قبوض"),
+    HEALTH("درمان"),
+    EDUCATION("آموزش"),
+    CLOTHES("پوشاک"),
+    ENTERTAINMENT("تفریح"),
+    SHOPPING("خرید"),
+    OTHER("سایر")
+}
+
+enum class ExpenseMember(val label: String) {
+    SELF("خودم"),
+    SPOUSE("همسر"),
+    CHILD("فرزند"),
+    FAMILY("خانواده"),
+    SHARED("مشترک")
+}

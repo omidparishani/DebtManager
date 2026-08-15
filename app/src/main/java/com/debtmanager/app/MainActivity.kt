@@ -119,6 +119,7 @@ fun DebtManagerNavHost(viewModel: MainViewModel) {
             composable(Screen.Loans.route) { LoansScreen(viewModel, navController) }
             composable(Screen.Checks.route) { ChecksScreen(viewModel) }
             composable(Screen.Debts.route) { DebtsScreen(viewModel) }
+            composable(Screen.Expenses.route) { ExpensesScreen(viewModel) }
             composable(Screen.Contacts.route) { ContactsScreen(viewModel, navController) }
             composable(
                 route = Screen.ContactDetail.route,

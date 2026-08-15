@@ -19,9 +19,10 @@ import com.debtmanager.app.data.entity.*
         PaymentHistory::class,
         Contact::class,
         BankAccount::class,
-        AccountTransaction::class
+        AccountTransaction::class,
+        Expense::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -33,6 +34,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun contactDao(): ContactDao
     abstract fun bankAccountDao(): BankAccountDao
     abstract fun accountTransactionDao(): AccountTransactionDao
+    abstract fun expenseDao(): ExpenseDao
 
     companion object {
         @Volatile
@@ -44,6 +46,25 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE checks ADD COLUMN icon TEXT NOT NULL DEFAULT 'receipt'")
                 db.execSQL("ALTER TABLE debts ADD COLUMN icon TEXT NOT NULL DEFAULT ''")
                 db.execSQL("ALTER TABLE recurring_payments ADD COLUMN icon TEXT NOT NULL DEFAULT 'money'")
+            }
+        }
+
+        
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS expenses (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        title TEXT NOT NULL,
+                        amount INTEGER NOT NULL,
+                        date INTEGER NOT NULL,
+                        category TEXT NOT NULL DEFAULT 'OTHER',
+                        member TEXT NOT NULL DEFAULT 'SELF',
+                        accountId INTEGER,
+                        notes TEXT NOT NULL DEFAULT '',
+                        icon TEXT NOT NULL DEFAULT 'shopping_cart'
+                    )
+                """.trimIndent())
             }
         }
 
@@ -108,7 +129,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "debt_manager.db"
-                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .fallbackToDestructiveMigration()
                     .build().also { INSTANCE = it }
             }
