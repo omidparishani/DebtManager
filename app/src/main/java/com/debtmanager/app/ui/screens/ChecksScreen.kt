@@ -16,6 +16,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.debtmanager.app.data.entity.CheckEntity
 import com.debtmanager.app.data.entity.CheckStatus
+import com.debtmanager.app.ui.components.ActionIconButton
 import com.debtmanager.app.ui.components.*
 import com.debtmanager.app.ui.theme.checkStatusColor
 import com.debtmanager.app.ui.theme.checkStatusLabel
@@ -113,8 +114,8 @@ fun CheckCard(check: CheckEntity, onEdit: () -> Unit, onDelete: () -> Unit, onCo
                     if (check.status == CheckStatus.PENDING.name) {
                         TextButton(onClick = onCollect) { Text("وصول") }
                     }
-                    IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, "ویرایش") }
-                    IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, "حذف") }
+                    ActionIconButton(Icons.Default.Edit, "ویرایش", onEdit)
+                    ActionIconButton(Icons.Default.Delete, "حذف", onDelete, tint = MaterialTheme.colorScheme.error)
                 }
             }
         }

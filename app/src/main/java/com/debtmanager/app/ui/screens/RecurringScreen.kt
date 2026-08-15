@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import com.debtmanager.app.data.entity.PaymentFrequency
 import com.debtmanager.app.data.entity.RecurringPayment
 import com.debtmanager.app.data.repository.getInstallmentStatus
+import com.debtmanager.app.ui.components.ActionIconButton
 import com.debtmanager.app.ui.components.*
 import com.debtmanager.app.util.CurrencyUtil
 import com.debtmanager.app.viewmodel.MainViewModel
@@ -117,8 +118,8 @@ fun RecurringCard(payment: RecurringPayment, onMarkPaid: () -> Unit, onEdit: () 
                         Icon(Icons.Default.Check, null)
                         Text("پرداخت شد")
                     }
-                    IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, "ویرایش") }
-                    IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, "حذف") }
+                    ActionIconButton(Icons.Default.Edit, "ویرایش", onEdit)
+                    ActionIconButton(Icons.Default.Delete, "حذف", onDelete, tint = MaterialTheme.colorScheme.error)
                 }
             }
         }

@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.debtmanager.app.data.entity.Contact
 import com.debtmanager.app.data.entity.ContactType
+import com.debtmanager.app.ui.components.ActionIconButton
 import com.debtmanager.app.ui.components.EmptyState
 import com.debtmanager.app.ui.components.ItemIconBadge
 import com.debtmanager.app.ui.navigation.Screen
@@ -96,8 +97,8 @@ fun ContactsScreen(viewModel: MainViewModel, navController: NavController? = nul
                                 )
                             }
                             Column {
-                                IconButton(onClick = { editTarget = contact }) { Icon(Icons.Default.Edit, null) }
-                                IconButton(onClick = { deleteTarget = contact }) { Icon(Icons.Default.Delete, null) }
+                                ActionIconButton(Icons.Default.Edit, "ویرایش", { editTarget = contact })
+                                ActionIconButton(Icons.Default.Delete, "حذف", { deleteTarget = contact }, tint = MaterialTheme.colorScheme.error)
                             }
                         }
                     }

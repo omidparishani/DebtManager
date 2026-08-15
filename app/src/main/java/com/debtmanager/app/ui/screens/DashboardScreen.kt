@@ -1,6 +1,9 @@
 package com.debtmanager.app.ui.screens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,6 +20,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.debtmanager.app.R
+import com.debtmanager.app.ui.components.AppIcon3D
 import com.debtmanager.app.ui.components.*
 import com.debtmanager.app.ui.navigation.Screen
 import com.debtmanager.app.ui.theme.StatusOverdue
@@ -176,29 +180,34 @@ item {
             }
 
             item {
-                item {
                 Text("دسترسی سریع", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(8.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AssistChip(
-                        onClick = { navController.navigate(Screen.Loans.route) },
-                        label = { Text("وام‌ها") },
-                        leadingIcon = { Icon(Icons.Default.AccountBalance, null, Modifier.size(18.dp)) }
-                    )
-                    AssistChip(
-                        onClick = { navController.navigate(Screen.Recurring.route) },
-                        label = { Text("اقساط دوره‌ای") },
-                        leadingIcon = { Icon(Icons.Default.EventRepeat, null, Modifier.size(18.dp)) }
-                    )
-                    AssistChip(
-                        onClick = { navController.navigate(Screen.History.route) },
-                        label = { Text("تاریخچه") },
-                        leadingIcon = { Icon(Icons.Default.History, null, Modifier.size(18.dp)) }
-                    )
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    QuickAccessTile("وام‌ها", Icons.Default.AccountBalance) {
+                        navController.navigate(Screen.Loans.route)
+                    }
+                    QuickAccessTile("اقساط", Icons.Default.EventRepeat) {
+                        navController.navigate(Screen.Recurring.route)
+                    }
+                    QuickAccessTile("مخارج", Icons.Default.ShoppingCart) {
+                        navController.navigate(Screen.Expenses.route)
+                    }
+                    QuickAccessTile("تاریخچه", Icons.Default.History) {
+                        navController.navigate(Screen.History.route)
+                    }
+                    QuickAccessTile("اشخاص", Icons.Default.Person) {
+                        navController.navigate(Screen.Contacts.route)
+                    }
                 }
             }
 
-            Text("آمار کلی", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            item {
+                Text("آمار کلی", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
                 ElevatedCard {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -288,5 +297,29 @@ fun UpcomingCard(item: com.debtmanager.app.data.repository.UpcomingItem) {
                 StatusChip(item.status)
             }
         }
+    }
+}
+
+@Composable
+private fun QuickAccessTile(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .width(72.dp)
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp)
+    ) {
+        AppIcon3D(imageVector = icon, size = 44, contentDescription = label)
+        Spacer(Modifier.height(6.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1,
+            fontWeight = FontWeight.Medium
+        )
     }
 }

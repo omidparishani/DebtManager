@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.debtmanager.app.data.entity.Loan
 import com.debtmanager.app.data.entity.LoanInstallment
+import com.debtmanager.app.ui.components.ActionIconButton
 import com.debtmanager.app.ui.components.*
 import com.debtmanager.app.ui.navigation.Screen
 import com.debtmanager.app.util.CurrencyUtil
@@ -119,8 +120,8 @@ fun LoanCard(loan: Loan, onClick: () -> Unit, onEdit: () -> Unit, onDelete: () -
                     Text("باقی‌مانده: ${CurrencyUtil.format(remaining)}")
                 }
                 Column {
-                    IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, "ویرایش") }
-                    IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, "حذف") }
+                    ActionIconButton(Icons.Default.Edit, "ویرایش", onEdit)
+                    ActionIconButton(Icons.Default.Delete, "حذف", onDelete, tint = MaterialTheme.colorScheme.error)
                 }
             }
         }

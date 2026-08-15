@@ -44,8 +44,10 @@ data class BottomNavItem(
     val label: String
 )
 
+// ترتیب درخواستی کاربر
 val bottomNavItems = listOf(
     BottomNavItem(Screen.Dashboard, Icons.Filled.SpaceDashboard, Icons.Outlined.SpaceDashboard, "داشبورد"),
+    BottomNavItem(Screen.Loans, Icons.Filled.AccountBalance, Icons.Outlined.AccountBalance, "وام‌ها"),
     BottomNavItem(Screen.Expenses, Icons.Filled.ShoppingCart, Icons.Outlined.ShoppingCart, "مخارج"),
     BottomNavItem(Screen.Accounts, Icons.Filled.AccountBalanceWallet, Icons.Outlined.AccountBalanceWallet, "حساب‌ها"),
     BottomNavItem(Screen.Checks, Icons.Filled.Payments, Icons.Outlined.Payments, "چک‌ها"),

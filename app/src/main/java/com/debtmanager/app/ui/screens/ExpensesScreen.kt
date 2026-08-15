@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import com.debtmanager.app.data.entity.Expense
 import com.debtmanager.app.data.entity.ExpenseCategory
 import com.debtmanager.app.data.entity.ExpenseMember
+import com.debtmanager.app.ui.components.ActionIconButton
 import com.debtmanager.app.ui.components.*
 import com.debtmanager.app.util.CurrencyUtil
 import com.debtmanager.app.util.PersianDateUtil
@@ -108,8 +109,8 @@ fun ExpensesScreen(viewModel: MainViewModel) {
                                     }
                                 }
                                 Column {
-                                    IconButton(onClick = { editTarget = exp }) { Icon(Icons.Default.Edit, null) }
-                                    IconButton(onClick = { deleteTarget = exp }) { Icon(Icons.Default.Delete, null) }
+                                    ActionIconButton(Icons.Default.Edit, "ویرایش", { editTarget = exp })
+                                    ActionIconButton(Icons.Default.Delete, "حذف", { deleteTarget = exp }, tint = MaterialTheme.colorScheme.error)
                                 }
                             }
                         }

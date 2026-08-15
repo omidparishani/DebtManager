@@ -7,6 +7,8 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -175,56 +177,56 @@ fun EnhancedBottomNav(
     onNavigate: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    NavigationBar(
-        modifier = modifier.shadow(12.dp),
-        containerColor = MaterialTheme.colorScheme.surface,
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .shadow(12.dp),
+        color = MaterialTheme.colorScheme.surface,
         tonalElevation = 8.dp
     ) {
-        bottomNavItems.forEach { item ->
-            val selected = currentRoute == item.screen.route
-            val iconColor by animateColorAsState(
-                targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                animationSpec = spring(stiffness = Spring.StiffnessMedium),
-                label = "navIcon"
-            )
-            val labelColor by animateColorAsState(
-                targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                animationSpec = spring(stiffness = Spring.StiffnessMedium),
-                label = "navLabel"
-            )
-
-            NavigationBarItem(
-                selected = selected,
-                onClick = { onNavigate(item.screen.route) },
-                icon = {
-                    Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
-                        else Color.Transparent,
-                        modifier = Modifier.size(width = 56.dp, height = 32.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
-                                contentDescription = item.label,
-                                tint = iconColor,
-                                modifier = Modifier.size(if (selected) 26.dp else 24.dp)
-                            )
-                        }
-                    }
-                },
-                label = {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(70.dp)
+                .padding(horizontal = 2.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            bottomNavItems.forEach { item ->
+                val selected = currentRoute == item.screen.route
+                val iconColor by animateColorAsState(
+                    targetValue = if (selected) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                    animationSpec = spring(stiffness = Spring.StiffnessMedium),
+                    label = "navIcon"
+                )
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clickable { onNavigate(item.screen.route) },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    AppIcon3D(
+                        imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
+                        size = if (selected) 34 else 30,
+                        tint = iconColor,
+                        contentDescription = item.label
+                    )
+                    Spacer(Modifier.height(2.dp))
                     Text(
                         item.label,
                         style = MaterialTheme.typography.labelSmall,
-                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                        color = labelColor
+                        color = iconColor,
+                        maxLines = 1,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
                     )
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    indicatorColor = Color.Transparent
-                )
-            )
+                }
+            }
         }
     }
 }
+
+

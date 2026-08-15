@@ -20,6 +20,7 @@ import com.debtmanager.app.data.entity.BankAccount
 import com.debtmanager.app.data.entity.Contact
 import com.debtmanager.app.data.entity.Debt
 import com.debtmanager.app.data.entity.DebtCategory
+import com.debtmanager.app.ui.components.ActionIconButton
 import com.debtmanager.app.ui.components.*
 import com.debtmanager.app.ui.theme.StatusOverdue
 import com.debtmanager.app.ui.theme.StatusPaid
@@ -184,8 +185,8 @@ fun DebtCard(
                             Text("پرداخت")
                         }
                     }
-                    IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, "ویرایش") }
-                    IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, "حذف") }
+                    ActionIconButton(Icons.Default.Edit, "ویرایش", onEdit)
+                    ActionIconButton(Icons.Default.Delete, "حذف", onDelete, tint = MaterialTheme.colorScheme.error)
                 }
             }
         }

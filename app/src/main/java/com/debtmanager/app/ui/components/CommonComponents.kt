@@ -270,26 +270,85 @@ fun IconPicker(
 @Composable
 fun ItemIconBadge(
     iconKey: String,
-    tint: Color = MaterialTheme.colorScheme.primary,
     modifier: Modifier = Modifier,
-    size: Int = 40
+    size: Int = 44,
+    tint: Color? = null
 ) {
-    Surface(
-        modifier = modifier.size(size.dp),
-        shape = CircleShape,
-        color = tint.copy(alpha = 0.12f),
-        shadowElevation = 2.dp
+    AppIcon3D(
+        imageVector = ItemIcons.resolve(iconKey),
+        modifier = modifier,
+        size = size,
+        tint = tint
+    )
+}
+
+/**
+ * آیکون سه‌بعدی‌مانند برای هر ImageVector
+ */
+@Composable
+fun AppIcon3D(
+    imageVector: ImageVector,
+    modifier: Modifier = Modifier,
+    size: Int = 40,
+    tint: Color? = null,
+    contentDescription: String? = null
+) {
+    val base = tint ?: MaterialTheme.colorScheme.primary
+    Box(
+        modifier = modifier
+            .size(size.dp)
+            .shadow(6.dp, CircleShape, clip = false)
+            .background(
+                brush = Brush.verticalGradient(
+                    listOf(base.copy(alpha = 0.98f), base.copy(alpha = 0.55f))
+                ),
+                shape = CircleShape
+            ),
+        contentAlignment = Alignment.Center
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                ItemIcons.resolve(iconKey),
-                contentDescription = null,
-                tint = tint,
-                modifier = Modifier.size((size * 0.55f).dp)
-            )
-        }
+        // هایلایت بالا
+        Box(
+            Modifier
+                .matchParentSize()
+                .padding(1.dp)
+                .background(
+                    brush = Brush.verticalGradient(
+                        listOf(Color.White.copy(alpha = 0.35f), Color.Transparent)
+                    ),
+                    shape = CircleShape
+                )
+        )
+        Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            tint = Color.White,
+            modifier = Modifier.size((size * 0.5f).dp)
+        )
     }
 }
+
+/**
+ * دکمه عملیات سه‌بعدی (ویرایش / حذف / افزودن)
+ */
+@Composable
+fun ActionIconButton(
+    imageVector: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    tint: Color? = null,
+    size: Int = 36
+) {
+    IconButton(onClick = onClick, modifier = modifier.size((size + 8).dp)) {
+        AppIcon3D(
+            imageVector = imageVector,
+            size = size,
+            tint = tint,
+            contentDescription = contentDescription
+        )
+    }
+}
+
 
 @Composable
 fun StatCard(
