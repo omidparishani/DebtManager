@@ -44,7 +44,7 @@ fun ChecksScreen(viewModel: MainViewModel) {
         if (checks.isEmpty()) {
             EmptyState("چکی ثبت نشده است", Modifier.padding(padding))
         } else {
-            LazyColumn(Modifier.padding(padding).fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyColumn(Modifier.padding(padding).fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(checks, key = { it.id }) { check ->
                     CheckCard(
                         check = check,

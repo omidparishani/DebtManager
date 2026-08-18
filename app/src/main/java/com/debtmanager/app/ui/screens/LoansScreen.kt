@@ -47,7 +47,7 @@ fun LoansScreen(viewModel: MainViewModel, navController: NavController) {
         if (loans.isEmpty()) {
             EmptyState("وامی ثبت نشده است", Modifier.padding(padding))
         } else {
-            LazyColumn(Modifier.padding(padding).fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyColumn(Modifier.padding(padding).fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(loans, key = { it.id }) { loan ->
                     LoanCard(
                         loan = loan,
@@ -216,7 +216,7 @@ fun LoanDetailScreen(viewModel: MainViewModel, loanId: Long, onBack: () -> Unit)
             )
         }
     ) { padding ->
-        LazyColumn(Modifier.padding(padding).fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyColumn(Modifier.padding(padding).fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             loan?.let { l ->
                 item {
                     ElevatedCard {

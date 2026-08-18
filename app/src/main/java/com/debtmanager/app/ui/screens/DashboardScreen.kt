@@ -1,6 +1,7 @@
 package com.debtmanager.app.ui.screens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -13,6 +14,8 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -180,6 +183,16 @@ item {
             }
 
             item {
+                val accounts by viewModel.bankAccounts.collectAsState(initial = emptyList())
+                if (accounts.isNotEmpty()) {
+                    Text("موجودی حساب‌ها", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    AccountBalanceChart(accounts = accounts)
+                    Spacer(Modifier.height(8.dp))
+                }
+            }
+
+            item {
                 Text("دسترسی سریع", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(10.dp))
                 Row(
@@ -321,5 +334,136 @@ private fun QuickAccessTile(
             maxLines = 1,
             fontWeight = FontWeight.Medium
         )
+    }
+}
+
+@Composable
+private fun AccountBalanceChart(accounts: List<com.debtmanager.app.data.entity.BankAccount>) {
+    val palette = listOf(
+        Color(0xFF0D7377),
+        Color(0xFF14919B),
+        Color(0xFF5C6BC0),
+        Color(0xFF7E57C2),
+        Color(0xFF26A69A),
+        Color(0xFF42A5F5),
+        Color(0xFFEF5350),
+        Color(0xFFFFA726)
+    )
+    val total = accounts.sumOf { it.balance }.coerceAtLeast(0L)
+    val maxBal = accounts.maxOf { it.balance }.coerceAtLeast(1L)
+
+    ElevatedCard(
+        Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        elevation = CardDefaults.elevatedCardElevation(4.dp)
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("توزیع موجودی", fontWeight = FontWeight.SemiBold)
+                Text(
+                    CurrencyUtil.format(total),
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+
+            // نمودار میله‌ای عمودی
+            val barCount = accounts.size.coerceAtMost(8)
+            val visible = accounts.sortedByDescending { it.balance }.take(barCount)
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .height(170.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                visible.forEachIndexed { index, acc ->
+                    val fraction = (acc.balance.toFloat() / maxBal.toFloat()).coerceIn(0.08f, 1f)
+                    val color = palette[index % palette.size]
+                    val barH = (120 * fraction).dp
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        verticalArrangement = Arrangement.Bottom
+                    ) {
+                        Text(
+                            formatShortAmount(acc.balance),
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Box(
+                            Modifier
+                                .width(28.dp)
+                                .height(barH)
+                                .background(
+                                    brush = Brush.verticalGradient(
+                                        listOf(color.copy(alpha = 0.95f), color.copy(alpha = 0.5f))
+                                    ),
+                                    shape = MaterialTheme.shapes.small
+                                )
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            acc.name.take(8),
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(12.dp))
+
+            // لیست با درصد سهم
+            visible.forEachIndexed { index, acc ->
+                val pct = if (total > 0) (acc.balance * 100 / total).toInt() else 0
+                val color = palette[index % palette.size]
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        Modifier
+                            .size(12.dp)
+                            .background(color, CircleShape)
+                    )
+                    Text(acc.name, Modifier.weight(1f), maxLines = 1)
+                    Text(
+                        "${PersianDateUtil.toPersianDigits(pct)}٪",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        CurrencyUtil.formatWithoutUnit(acc.balance),
+                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun formatShortAmount(amount: Long): String {
+    val abs = kotlin.math.abs(amount)
+    return when {
+        abs >= 1_000_000_000L -> "${abs / 1_000_000_000}B"
+        abs >= 1_000_000L -> "${abs / 1_000_000}M"
+        abs >= 1_000L -> "${abs / 1_000}K"
+        else -> abs.toString()
     }
 }

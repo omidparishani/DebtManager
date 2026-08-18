@@ -339,6 +339,42 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         onDone()
     }
 
+
+    /** پرداخت یکجای همه بدهکاری‌های باز یک شخص از یک حساب بانکی */
+    fun payAllDebtsForContact(
+        contactId: Long,
+        contactName: String,
+        bankAccountId: Long,
+        date: Long = System.currentTimeMillis(),
+        onDone: (paidCount: Int, totalAmount: Long) -> Unit = { _, _ -> }
+    ) = viewModelScope.launch {
+        val all = debts.value.filter { d ->
+            !d.isCredit &&
+                (d.contactId == contactId || d.creditorName == contactName) &&
+                (d.totalAmount - d.paidAmount) > 0
+        }
+        var total = 0L
+        for (debt in all) {
+            val remaining = (debt.totalAmount - debt.paidAmount).coerceAtLeast(0)
+            if (remaining <= 0) continue
+            repository.payDebt(debt, remaining, date, bankAccountId)
+            db.bankAccountDao().adjustBalance(bankAccountId, -remaining)
+            db.accountTransactionDao().insert(
+                AccountTransaction(
+                    accountId = bankAccountId,
+                    type = "WITHDRAW",
+                    amount = remaining,
+                    date = date,
+                    description = "تسویه کامل بدهی: ${debt.creditorName}",
+                    relatedType = "DEBT",
+                    relatedId = debt.id
+                )
+            )
+            total += remaining
+        }
+        onDone(all.size, total)
+    }
+
     fun payDebt(debt: Debt, amount: Long, date: Long, bankAccountId: Long? = null, onDone: () -> Unit) = viewModelScope.launch {
         repository.payDebt(debt, amount, date, bankAccountId)
         // کسر/افزایش موجودی حساب بانکی
@@ -570,6 +606,85 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
     fun deleteExpense(expense: Expense, onDone: () -> Unit = {}) = viewModelScope.launch {
         db.expenseDao().delete(expense)
+        onDone()
+    }
+
+
+    fun updateAccountTransaction(
+        old: AccountTransaction,
+        newAmount: Long,
+        newDate: Long,
+        newDescription: String,
+        onDone: () -> Unit = {}
+    ) = viewModelScope.launch {
+        // برگشت اثر قبلی
+        val sign = if (old.type == "DEPOSIT") -1L else 1L
+        db.bankAccountDao().adjustBalance(old.accountId, sign * old.amount)
+        // اعمال مبلغ جدید
+        val newSign = if (old.type == "DEPOSIT") 1L else -1L
+        db.bankAccountDao().adjustBalance(old.accountId, newSign * newAmount)
+        db.accountTransactionDao().update(
+            old.copy(amount = newAmount, date = newDate, description = newDescription)
+        )
+        onDone()
+    }
+
+    fun deleteAccountTransaction(tx: AccountTransaction, onDone: () -> Unit = {}) = viewModelScope.launch {
+        val sign = if (tx.type == "DEPOSIT") -1L else 1L
+        db.bankAccountDao().adjustBalance(tx.accountId, sign * tx.amount)
+        db.accountTransactionDao().delete(tx)
+        onDone()
+    }
+
+    /** انتقال بین حساب‌ها با کارمزد (کارمزد از حساب مبدأ کسر می‌شود) */
+    fun transferBetweenAccounts(
+        fromAccountId: Long,
+        toAccountId: Long,
+        amount: Long,
+        fee: Long,
+        date: Long,
+        description: String,
+        onDone: () -> Unit = {}
+    ) = viewModelScope.launch {
+        if (fromAccountId == toAccountId || amount <= 0) {
+            onDone()
+            return@launch
+        }
+        val totalDebit = amount + fee.coerceAtLeast(0)
+        db.bankAccountDao().adjustBalance(fromAccountId, -totalDebit)
+        db.bankAccountDao().adjustBalance(toAccountId, amount)
+        val desc = description.ifBlank { "انتقال بین حساب‌ها" }
+        db.accountTransactionDao().insert(
+            AccountTransaction(
+                accountId = fromAccountId,
+                type = "TRANSFER",
+                amount = amount,
+                date = date,
+                description = "$desc (به حساب مقصد)",
+                toAccountId = toAccountId
+            )
+        )
+        if (fee > 0) {
+            db.accountTransactionDao().insert(
+                AccountTransaction(
+                    accountId = fromAccountId,
+                    type = "WITHDRAW",
+                    amount = fee,
+                    date = date,
+                    description = "کارمزد انتقال: $desc"
+                )
+            )
+        }
+        db.accountTransactionDao().insert(
+            AccountTransaction(
+                accountId = toAccountId,
+                type = "TRANSFER",
+                amount = amount,
+                date = date,
+                description = "$desc (از حساب مبدأ)",
+                toAccountId = fromAccountId
+            )
+        )
         onDone()
     }
 

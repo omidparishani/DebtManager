@@ -7,7 +7,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,7 +17,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.debtmanager.app.data.entity.AccountTransaction
 import com.debtmanager.app.data.entity.BankAccount
+import com.debtmanager.app.ui.components.ActionIconButton
 import com.debtmanager.app.ui.components.AmountTextField
 import com.debtmanager.app.ui.components.EmptyState
 import com.debtmanager.app.ui.components.ItemIconBadge
@@ -32,13 +36,23 @@ fun AccountsScreen(viewModel: MainViewModel) {
     var showAddAccount by remember { mutableStateOf(false) }
     var showDeposit by remember { mutableStateOf<BankAccount?>(null) }
     var showWithdraw by remember { mutableStateOf<BankAccount?>(null) }
+    var showTransfer by remember { mutableStateOf(false) }
     var detailAccount by remember { mutableStateOf<BankAccount?>(null) }
     var deleteTarget by remember { mutableStateOf<BankAccount?>(null) }
+    var editTx by remember { mutableStateOf<AccountTransaction?>(null) }
+    var deleteTx by remember { mutableStateOf<AccountTransaction?>(null) }
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAddAccount = true }) {
-                Icon(Icons.Default.Add, "افزودن حساب")
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (accounts.size >= 2) {
+                    SmallFloatingActionButton(onClick = { showTransfer = true }) {
+                        Icon(Icons.Default.SwapHoriz, "انتقال")
+                    }
+                }
+                FloatingActionButton(onClick = { showAddAccount = true }) {
+                    Icon(Icons.Default.Add, "افزودن حساب")
+                }
             }
         }
     ) { padding ->
@@ -50,7 +64,7 @@ fun AccountsScreen(viewModel: MainViewModel) {
         } else {
             LazyColumn(
                 Modifier.padding(padding).fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 item {
@@ -121,7 +135,6 @@ fun AccountsScreen(viewModel: MainViewModel) {
         }
     }
 
-    // جزئیات حساب + تراکنش‌ها
     detailAccount?.let { acc ->
         val txs = transactions.filter { it.accountId == acc.id }.sortedByDescending { it.date }
         AlertDialog(
@@ -132,33 +145,58 @@ fun AccountsScreen(viewModel: MainViewModel) {
                     Text("موجودی: ${CurrencyUtil.format(acc.balance)}", fontWeight = FontWeight.Bold)
                     if (acc.bankName.isNotBlank()) Text("بانک: ${acc.bankName}")
                     HorizontalDivider()
-                    Text("تراکنش‌ها", fontWeight = FontWeight.Medium)
+                    Text("تراکنش‌ها (برای ویرایش لمس کنید)", fontWeight = FontWeight.Medium)
                     if (txs.isEmpty()) {
                         Text("تراکنشی ثبت نشده")
                     } else {
-                        txs.take(25).forEach { tx ->
-                            val sign = if (tx.type == "DEPOSIT") "+" else "−"
-                            val color = if (tx.type == "DEPOSIT") Color(0xFF2E7D32) else Color(0xFFC62828)
+                        txs.take(30).forEach { tx ->
+                            val isIn = tx.type == "DEPOSIT" || (tx.type == "TRANSFER" && tx.toAccountId == acc.id)
+                            // برای TRANSFER: اگر accountId == acc.id و type TRANSFER و description شامل مبدأ باشد برداشت است
+                            val positive = when (tx.type) {
+                                "DEPOSIT" -> true
+                                "WITHDRAW" -> false
+                                "TRANSFER" -> tx.description.contains("از حساب") || (tx.toAccountId != null && tx.toAccountId != acc.id && !tx.description.contains("به حساب"))
+                                else -> false
+                            }
+                            // ساده‌تر: DEPOSIT مثبت، بقیه منفی مگر متن «از حساب مبدأ»
+                            val isPositive = tx.type == "DEPOSIT" ||
+                                (tx.type == "TRANSFER" && tx.description.contains("از حساب مبدأ"))
+                            val color = if (isPositive) Color(0xFF2E7D32) else Color(0xFFC62828)
+                            val sign = if (isPositive) "+" else "−"
                             Row(
-                                Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column(Modifier.weight(1f)) {
-                                    Text(tx.description.ifBlank { tx.type })
+                                Column(
+                                    Modifier
+                                        .weight(1f)
+                                        .clickable { editTx = tx }
+                                ) {
+                                    Text(tx.description.ifBlank { tx.type }, maxLines = 2)
                                     Text(
                                         PersianDateUtil.formatShort(tx.date),
                                         style = MaterialTheme.typography.labelSmall
                                     )
+                                    Text(
+                                        "$sign ${CurrencyUtil.format(tx.amount)}",
+                                        color = color,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
-                                Text(
-                                    "$sign ${CurrencyUtil.format(tx.amount)}",
-                                    color = color,
-                                    fontWeight = FontWeight.Bold
+                                ActionIconButton(Icons.Default.Edit, "ویرایش", { editTx = tx }, size = 28)
+                                ActionIconButton(
+                                    Icons.Default.Delete,
+                                    "حذف",
+                                    { deleteTx = tx },
+                                    tint = MaterialTheme.colorScheme.error,
+                                    size = 28
                                 )
                             }
                         }
                     }
-                    Spacer(Modifier.height(8.dp))
                     OutlinedButton(
                         onClick = {
                             detailAccount = null
@@ -176,6 +214,35 @@ fun AccountsScreen(viewModel: MainViewModel) {
             confirmButton = {
                 TextButton(onClick = { detailAccount = null }) { Text("بستن") }
             }
+        )
+    }
+
+    editTx?.let { tx ->
+        EditTransactionDialog(
+            tx = tx,
+            onDismiss = { editTx = null },
+            onSave = { amount, date, desc ->
+                viewModel.updateAccountTransaction(tx, amount, date, desc) {
+                    editTx = null
+                }
+            }
+        )
+    }
+
+    deleteTx?.let { tx ->
+        AlertDialog(
+            onDismissRequest = { deleteTx = null },
+            title = { Text("حذف تراکنش") },
+            text = { Text("با حذف، موجودی حساب هم اصلاح می‌شود. ادامه؟") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteAccountTransaction(tx) { deleteTx = null }
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text("حذف") }
+            },
+            dismissButton = { TextButton(onClick = { deleteTx = null }) { Text("انصراف") } }
         )
     }
 
@@ -209,6 +276,131 @@ fun AccountsScreen(viewModel: MainViewModel) {
             viewModel.withdraw(acc.id, amount, date, desc) { showWithdraw = null }
         }
     }
+    if (showTransfer) {
+        TransferDialog(
+            accounts = accounts,
+            onDismiss = { showTransfer = false },
+            onConfirm = { from, to, amount, fee, date, desc ->
+                viewModel.transferBetweenAccounts(from, to, amount, fee, date, desc) {
+                    showTransfer = false
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun EditTransactionDialog(
+    tx: AccountTransaction,
+    onDismiss: () -> Unit,
+    onSave: (Long, Long, String) -> Unit
+) {
+    var amount by remember { mutableStateOf(CurrencyUtil.formatWithoutUnit(tx.amount)) }
+    var date by remember { mutableLongStateOf(tx.date) }
+    var desc by remember { mutableStateOf(tx.description) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("ویرایش تراکنش") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("نوع: ${tx.type}", style = MaterialTheme.typography.labelMedium)
+                AmountTextField(amount, { amount = it }, "مبلغ (ریال) *")
+                JalaliDatePickerField(date, { date = it }, "تاریخ")
+                OutlinedTextField(desc, { desc = it }, label = { Text("شرح") }, modifier = Modifier.fillMaxWidth())
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val a = CurrencyUtil.parse(amount) ?: return@TextButton
+                if (a <= 0) return@TextButton
+                onSave(a, date, desc.trim())
+            }) { Text("ذخیره") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TransferDialog(
+    accounts: List<BankAccount>,
+    onDismiss: () -> Unit,
+    onConfirm: (fromId: Long, toId: Long, amount: Long, fee: Long, date: Long, desc: String) -> Unit
+) {
+    var fromId by remember { mutableStateOf(accounts.firstOrNull()?.id) }
+    var toId by remember { mutableStateOf(accounts.getOrNull(1)?.id ?: accounts.firstOrNull()?.id) }
+    var amount by remember { mutableStateOf("") }
+    var fee by remember { mutableStateOf("") }
+    var date by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var desc by remember { mutableStateOf("") }
+    var fromExpanded by remember { mutableStateOf(false) }
+    var toExpanded by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("انتقال بین حساب‌ها") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                ExposedDropdownMenuBox(fromExpanded, { fromExpanded = it }) {
+                    val name = accounts.find { it.id == fromId }?.name ?: "انتخاب مبدأ"
+                    OutlinedTextField(
+                        name, {}, readOnly = true,
+                        label = { Text("از حساب *") },
+                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(fromExpanded, { fromExpanded = false }) {
+                        accounts.forEach { a ->
+                            DropdownMenuItem(
+                                text = { Text("${a.name} (${CurrencyUtil.format(a.balance)})") },
+                                onClick = { fromId = a.id; fromExpanded = false }
+                            )
+                        }
+                    }
+                }
+                ExposedDropdownMenuBox(toExpanded, { toExpanded = it }) {
+                    val name = accounts.find { it.id == toId }?.name ?: "انتخاب مقصد"
+                    OutlinedTextField(
+                        name, {}, readOnly = true,
+                        label = { Text("به حساب *") },
+                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(toExpanded, { toExpanded = false }) {
+                        accounts.filter { it.id != fromId }.forEach { a ->
+                            DropdownMenuItem(
+                                text = { Text("${a.name} (${CurrencyUtil.format(a.balance)})") },
+                                onClick = { toId = a.id; toExpanded = false }
+                            )
+                        }
+                    }
+                }
+                AmountTextField(amount, { amount = it }, "مبلغ انتقال (ریال) *")
+                AmountTextField(fee, { fee = it }, "کارمزد (ریال)")
+                JalaliDatePickerField(date, { date = it }, "تاریخ")
+                OutlinedTextField(desc, { desc = it }, label = { Text("شرح") }, modifier = Modifier.fillMaxWidth())
+                val a = CurrencyUtil.parse(amount) ?: 0L
+                val f = CurrencyUtil.parse(fee) ?: 0L
+                if (a > 0) {
+                    Text(
+                        "از مبدأ کسر می‌شود: ${CurrencyUtil.format(a + f)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val a = CurrencyUtil.parse(amount) ?: return@TextButton
+                val f = CurrencyUtil.parse(fee) ?: 0L
+                val from = fromId ?: return@TextButton
+                val to = toId ?: return@TextButton
+                if (a <= 0 || from == to) return@TextButton
+                onConfirm(from, to, a, f, date, desc.trim())
+            }) { Text("انتقال") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
+    )
 }
 
 @Composable

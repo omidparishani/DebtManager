@@ -47,7 +47,7 @@ fun ContactsScreen(viewModel: MainViewModel, navController: NavController? = nul
         } else {
             LazyColumn(
                 Modifier.padding(padding).fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(contacts, key = { it.id }) { contact ->
