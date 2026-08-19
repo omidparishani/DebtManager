@@ -139,64 +139,82 @@ fun AccountsScreen(viewModel: MainViewModel) {
         val txs = transactions.filter { it.accountId == acc.id }.sortedByDescending { it.date }
         AlertDialog(
             onDismissRequest = { detailAccount = null },
-            title = { Text(acc.name) },
+            title = {
+                Column {
+                    Text(acc.name)
+                    Text(
+                        "موجودی: ${CurrencyUtil.format(acc.balance)}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (acc.bankName.isNotBlank()) {
+                        Text(acc.bankName, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("موجودی: ${CurrencyUtil.format(acc.balance)}", fontWeight = FontWeight.Bold)
-                    if (acc.bankName.isNotBlank()) Text("بانک: ${acc.bankName}")
-                    HorizontalDivider()
-                    Text("تراکنش‌ها (برای ویرایش لمس کنید)", fontWeight = FontWeight.Medium)
+                Column(Modifier.fillMaxWidth()) {
+                    Text(
+                        "تراکنش‌ها (${PersianDateUtil.toPersianDigits(txs.size)} مورد)",
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(Modifier.height(8.dp))
                     if (txs.isEmpty()) {
                         Text("تراکنشی ثبت نشده")
                     } else {
-                        txs.take(30).forEach { tx ->
-                            val isIn = tx.type == "DEPOSIT" || (tx.type == "TRANSFER" && tx.toAccountId == acc.id)
-                            // برای TRANSFER: اگر accountId == acc.id و type TRANSFER و description شامل مبدأ باشد برداشت است
-                            val positive = when (tx.type) {
-                                "DEPOSIT" -> true
-                                "WITHDRAW" -> false
-                                "TRANSFER" -> tx.description.contains("از حساب") || (tx.toAccountId != null && tx.toAccountId != acc.id && !tx.description.contains("به حساب"))
-                                else -> false
-                            }
-                            // ساده‌تر: DEPOSIT مثبت، بقیه منفی مگر متن «از حساب مبدأ»
-                            val isPositive = tx.type == "DEPOSIT" ||
-                                (tx.type == "TRANSFER" && tx.description.contains("از حساب مبدأ"))
-                            val color = if (isPositive) Color(0xFF2E7D32) else Color(0xFFC62828)
-                            val sign = if (isPositive) "+" else "−"
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 6.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(
-                                    Modifier
-                                        .weight(1f)
-                                        .clickable { editTx = tx }
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 120.dp, max = 420.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            items(txs, key = { it.id }) { tx ->
+                                val isPositive = tx.type == "DEPOSIT" ||
+                                    (tx.type == "TRANSFER" && tx.description.contains("از حساب مبدأ"))
+                                val color = if (isPositive) Color(0xFF2E7D32) else Color(0xFFC62828)
+                                val sign = if (isPositive) "+" else "−"
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                                    )
                                 ) {
-                                    Text(tx.description.ifBlank { tx.type }, maxLines = 2)
-                                    Text(
-                                        PersianDateUtil.formatShort(tx.date),
-                                        style = MaterialTheme.typography.labelSmall
-                                    )
-                                    Text(
-                                        "$sign ${CurrencyUtil.format(tx.amount)}",
-                                        color = color,
-                                        fontWeight = FontWeight.Bold
-                                    )
+                                    Row(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(
+                                            Modifier
+                                                .weight(1f)
+                                                .clickable { editTx = tx }
+                                        ) {
+                                            Text(tx.description.ifBlank { tx.type }, maxLines = 2)
+                                            Text(
+                                                PersianDateUtil.formatShort(tx.date),
+                                                style = MaterialTheme.typography.labelSmall
+                                            )
+                                            Text(
+                                                "$sign ${CurrencyUtil.format(tx.amount)}",
+                                                color = color,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                        ActionIconButton(Icons.Default.Edit, "ویرایش", { editTx = tx }, size = 28)
+                                        ActionIconButton(
+                                            Icons.Default.Delete,
+                                            "حذف",
+                                            { deleteTx = tx },
+                                            tint = MaterialTheme.colorScheme.error,
+                                            size = 28
+                                        )
+                                    }
                                 }
-                                ActionIconButton(Icons.Default.Edit, "ویرایش", { editTx = tx }, size = 28)
-                                ActionIconButton(
-                                    Icons.Default.Delete,
-                                    "حذف",
-                                    { deleteTx = tx },
-                                    tint = MaterialTheme.colorScheme.error,
-                                    size = 28
-                                )
                             }
                         }
                     }
+                    Spacer(Modifier.height(8.dp))
                     OutlinedButton(
                         onClick = {
                             detailAccount = null
